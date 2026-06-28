@@ -6,21 +6,20 @@ Audio généré EN PREMIER → durée mesurée → vidéo calée sur l'audio
 import os, sys, subprocess, math, random, textwrap, wave
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
-import imageio_ffmpeg
-from piper import PiperVoice
+import imageio_ffmpeg, soundfile as sf
+from kokoro_onnx import Kokoro
 
-_piper_voice = None
-def get_piper():
-    global _piper_voice
-    if _piper_voice is None:
-        _piper_voice = PiperVoice.load(PIPER_MODEL, config_path=PIPER_CFG, use_cuda=False)
-    return _piper_voice
+_kokoro = None
+def get_kokoro():
+    global _kokoro
+    if _kokoro is None:
+        SCRATCH = "/tmp/claude-0/-home-user-ad-secure-lab/6775e2d7-d021-5a5b-869f-7cb70bf20c47/scratchpad/kokoro_model"
+        _kokoro = Kokoro(f"{SCRATCH}/kokoro-v1.0.int8.onnx", f"{SCRATCH}/voices-v1.0.bin")
+    return _kokoro
 
-FFMPEG      = imageio_ffmpeg.get_ffmpeg_exe()
-SCRATCH     = "/tmp/claude-0/-home-user-ad-secure-lab/6775e2d7-d021-5a5b-869f-7cb70bf20c47/scratchpad"
-OUT_DIR     = os.path.join(SCRATCH, "tiktok_v3")
-PIPER_MODEL = os.path.join(SCRATCH, "piper_model/fr_FR-nod-medium.onnx")
-PIPER_CFG   = os.path.join(SCRATCH, "piper_model/fr_FR-nod-medium.onnx.json")
+FFMPEG  = imageio_ffmpeg.get_ffmpeg_exe()
+SCRATCH = "/tmp/claude-0/-home-user-ad-secure-lab/6775e2d7-d021-5a5b-869f-7cb70bf20c47/scratchpad"
+OUT_DIR = os.path.join(SCRATCH, "tiktok_v3")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 W, H = 720, 1280
@@ -138,17 +137,17 @@ def draw_wrapped(draw, text, x, y, w, fnt, fill, align="center", spacing=8):
 def make_audio(scene, idx):
     raw = os.path.join(OUT_DIR, f"raw_{idx}.wav")
     mp3 = os.path.join(OUT_DIR, f"voice_{idx}.mp3")
-    # Piper TTS — voix française neurale naturelle
-    voice = get_piper()
-    with wave.open(raw, "wb") as wf:
-        voice.synthesize_wav(scene["voix"], wf)
-    # Post-traitement : légère présence 3 kHz, dé-esser, compresseur, normalisation
+    # Kokoro TTS — voix féminine française ff_siwis, très naturelle (24 kHz)
+    kokoro = get_kokoro()
+    samples, sr = kokoro.create(scene["voix"], voice="ff_siwis", lang="fr-fr", speed=0.92)
+    sf.write(raw, samples, sr)
+    # Post-traitement : légère chaleur +2 dB à 200 Hz, dé-esser à 8 kHz, loudnorm
     filters = (
         "aresample=44100,"
-        "equalizer=f=3000:width_type=o:width=1.5:g=1.5,"
-        "equalizer=f=8500:width_type=o:width=1.5:g=-2,"
-        "acompressor=threshold=-22dB:ratio=2:attack=8:release=120:makeup=1dB,"
-        "loudnorm=I=-16:TP=-1.5:LRA=8"
+        "equalizer=f=200:width_type=o:width=2:g=1.5,"
+        "equalizer=f=8000:width_type=o:width=1.5:g=-1.5,"
+        "acompressor=threshold=-22dB:ratio=1.8:attack=10:release=150:makeup=1dB,"
+        "loudnorm=I=-16:TP=-1.5:LRA=9"
     )
     subprocess.run([FFMPEG, "-y", "-i", raw, "-af", filters,
                     "-acodec", "libmp3lame", "-b:a", "192k", mp3],
@@ -676,7 +675,7 @@ def main():
         print(f"[{idx+1}/5] Scène : {sid.upper()}")
 
         # 1. Audio d'abord
-        print(f"   Génération audio Pico TTS...")
+        print(f"   Génération audio Kokoro ff_siwis (fr-fr)...")
         audio_path = make_audio(scene, idx)
         dur = audio_duration(audio_path)
         print(f"   Durée audio : {dur:.2f}s")
