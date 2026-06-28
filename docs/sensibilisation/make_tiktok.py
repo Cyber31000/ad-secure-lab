@@ -3,14 +3,24 @@
 TikTok Brouteurs v3 — cinéma, sync audio parfait, animations réalistes
 Audio généré EN PREMIER → durée mesurée → vidéo calée sur l'audio
 """
-import os, sys, subprocess, math, random, textwrap
+import os, sys, subprocess, math, random, textwrap, wave
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import imageio_ffmpeg
+from piper import PiperVoice
 
-FFMPEG  = imageio_ffmpeg.get_ffmpeg_exe()
-SCRATCH = "/tmp/claude-0/-home-user-ad-secure-lab/6775e2d7-d021-5a5b-869f-7cb70bf20c47/scratchpad"
-OUT_DIR = os.path.join(SCRATCH, "tiktok_v3")
+_piper_voice = None
+def get_piper():
+    global _piper_voice
+    if _piper_voice is None:
+        _piper_voice = PiperVoice.load(PIPER_MODEL, config_path=PIPER_CFG, use_cuda=False)
+    return _piper_voice
+
+FFMPEG      = imageio_ffmpeg.get_ffmpeg_exe()
+SCRATCH     = "/tmp/claude-0/-home-user-ad-secure-lab/6775e2d7-d021-5a5b-869f-7cb70bf20c47/scratchpad"
+OUT_DIR     = os.path.join(SCRATCH, "tiktok_v3")
+PIPER_MODEL = os.path.join(SCRATCH, "piper_model/fr_FR-nod-medium.onnx")
+PIPER_CFG   = os.path.join(SCRATCH, "piper_model/fr_FR-nod-medium.onnx.json")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 W, H = 720, 1280
@@ -128,13 +138,16 @@ def draw_wrapped(draw, text, x, y, w, fnt, fill, align="center", spacing=8):
 def make_audio(scene, idx):
     raw = os.path.join(OUT_DIR, f"raw_{idx}.wav")
     mp3 = os.path.join(OUT_DIR, f"voice_{idx}.mp3")
-    subprocess.run(["pico2wave", "-l", "fr-FR", "-w", raw, scene["voix"]],
-                   stderr=subprocess.DEVNULL, check=True)
+    # Piper TTS — voix française neurale naturelle
+    voice = get_piper()
+    with wave.open(raw, "wb") as wf:
+        voice.synthesize_wav(scene["voix"], wf)
+    # Post-traitement : légère présence 3 kHz, dé-esser, compresseur, normalisation
     filters = (
         "aresample=44100,"
-        "equalizer=f=3000:width_type=o:width=1.5:g=2,"
-        "equalizer=f=8000:width_type=o:width=1.5:g=-2,"
-        "acompressor=threshold=-20dB:ratio=2.5:attack=8:release=100:makeup=1.5dB,"
+        "equalizer=f=3000:width_type=o:width=1.5:g=1.5,"
+        "equalizer=f=8500:width_type=o:width=1.5:g=-2,"
+        "acompressor=threshold=-22dB:ratio=2:attack=8:release=120:makeup=1dB,"
         "loudnorm=I=-16:TP=-1.5:LRA=8"
     )
     subprocess.run([FFMPEG, "-y", "-i", raw, "-af", filters,
