@@ -234,37 +234,24 @@ def create_scene_video(scene, index):
 
 
 def create_tts(scene, index):
-    """Génère la voix off en français avec MBROLA fr4 + post-traitement audio."""
+    """Génère la voix off avec SVOX Pico TTS (voix féminine fr-FR claire et naturelle)."""
     raw_wav  = os.path.join(OUT_DIR, f"voice_raw_{index:02d}.wav")
     mp3_path = os.path.join(OUT_DIR, f"voice_{index:02d}.mp3")
 
-    # MBROLA fr4 : voix féminine française (bien plus naturelle qu'espeak seul)
-    # -s 130 : débit légèrement plus lent pour meilleure clarté
-    # -p 48  : hauteur de voix douce
-    # -a 160 : amplitude/volume
-    cmd = [
-        "espeak-ng",
-        "-v", "mb-fr4",
-        "-s", "130",
-        "-p", "48",
-        "-a", "160",
-        scene["voix"],
-        "-w", raw_wav,
-    ]
+    # pico2wave : moteur SVOX Pico, voix féminine française intégrée dans Android/iOS
+    # Qualité bien supérieure à espeak/MBROLA — prosodie naturelle, consonnes claires
+    cmd = ["pico2wave", "-l", "fr-FR", "-w", raw_wav, scene["voix"]]
     subprocess.run(cmd, stderr=subprocess.DEVNULL, check=True)
 
-    # Post-traitement ffmpeg pour sonorité plus chaleureuse et professionnelle :
-    #  - aresample=44100   : upsampling à 44.1 kHz
-    #  - equalizer         : atténue les fréquences sibilantes (~7 kHz) & boost basses (~200 Hz)
-    #  - acompressor       : compression légère pour homogénéiser le volume
-    #  - loudnorm          : normalisation EBU R128 (niveau broadcast -16 LUFS)
+    # Post-traitement : légère présence à 3 kHz (clarté vocale féminine),
+    # dé-esser doux à 8 kHz, compresseur broadcast, normalisation EBU R128
     audio_filters = (
         "aresample=44100,"
-        "equalizer=f=200:width_type=o:width=2:g=3,"
-        "equalizer=f=7000:width_type=o:width=2:g=-4,"
-        "equalizer=f=3500:width_type=o:width=2:g=2,"
-        "acompressor=threshold=-18dB:ratio=3:attack=5:release=80:makeup=2dB,"
-        "loudnorm=I=-16:TP=-1.5:LRA=7"
+        "equalizer=f=3000:width_type=o:width=1.5:g=2,"
+        "equalizer=f=8000:width_type=o:width=1.5:g=-2,"
+        "equalizer=f=150:width_type=o:width=2:g=-1,"
+        "acompressor=threshold=-20dB:ratio=2.5:attack=8:release=100:makeup=1.5dB,"
+        "loudnorm=I=-16:TP=-1.5:LRA=8"
     )
     cmd2 = [
         FFMPEG, "-y", "-i", raw_wav,
@@ -273,7 +260,7 @@ def create_tts(scene, index):
         mp3_path,
     ]
     subprocess.run(cmd2, stderr=subprocess.DEVNULL, check=True)
-    print(f"  ✓ Scène {index+1} voix MBROLA : {mp3_path}")
+    print(f"  ✓ Scène {index+1} voix Pico fr-FR : {mp3_path}")
     return mp3_path
 
 
