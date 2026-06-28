@@ -234,27 +234,46 @@ def create_scene_video(scene, index):
 
 
 def create_tts(scene, index):
-    """Génère la voix off en français avec espeak-ng."""
-    wav_path = os.path.join(OUT_DIR, f"voice_{index:02d}.wav")
+    """Génère la voix off en français avec MBROLA fr4 + post-traitement audio."""
+    raw_wav  = os.path.join(OUT_DIR, f"voice_raw_{index:02d}.wav")
     mp3_path = os.path.join(OUT_DIR, f"voice_{index:02d}.mp3")
-    # espeak-ng : voix fr, débit 140 wpm, ton légèrement grave
+
+    # MBROLA fr4 : voix féminine française (bien plus naturelle qu'espeak seul)
+    # -s 130 : débit légèrement plus lent pour meilleure clarté
+    # -p 48  : hauteur de voix douce
+    # -a 160 : amplitude/volume
     cmd = [
         "espeak-ng",
-        "-v", "fr",
-        "-s", "140",
-        "-p", "45",
-        "-a", "180",
+        "-v", "mb-fr4",
+        "-s", "130",
+        "-p", "48",
+        "-a", "160",
         scene["voix"],
-        "-w", wav_path,
+        "-w", raw_wav,
     ]
     subprocess.run(cmd, stderr=subprocess.DEVNULL, check=True)
-    # Convertir WAV→MP3 avec ffmpeg intégré
+
+    # Post-traitement ffmpeg pour sonorité plus chaleureuse et professionnelle :
+    #  - aresample=44100   : upsampling à 44.1 kHz
+    #  - equalizer         : atténue les fréquences sibilantes (~7 kHz) & boost basses (~200 Hz)
+    #  - acompressor       : compression légère pour homogénéiser le volume
+    #  - loudnorm          : normalisation EBU R128 (niveau broadcast -16 LUFS)
+    audio_filters = (
+        "aresample=44100,"
+        "equalizer=f=200:width_type=o:width=2:g=3,"
+        "equalizer=f=7000:width_type=o:width=2:g=-4,"
+        "equalizer=f=3500:width_type=o:width=2:g=2,"
+        "acompressor=threshold=-18dB:ratio=3:attack=5:release=80:makeup=2dB,"
+        "loudnorm=I=-16:TP=-1.5:LRA=7"
+    )
     cmd2 = [
-        FFMPEG, "-y", "-i", wav_path,
-        "-acodec", "libmp3lame", "-q:a", "4", mp3_path,
+        FFMPEG, "-y", "-i", raw_wav,
+        "-af", audio_filters,
+        "-acodec", "libmp3lame", "-b:a", "192k",
+        mp3_path,
     ]
     subprocess.run(cmd2, stderr=subprocess.DEVNULL, check=True)
-    print(f"  ✓ Scène {index+1} voix : {mp3_path}")
+    print(f"  ✓ Scène {index+1} voix MBROLA : {mp3_path}")
     return mp3_path
 
 
