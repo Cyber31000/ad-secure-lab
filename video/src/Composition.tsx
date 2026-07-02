@@ -1,3 +1,5 @@
+import { TitleCard } from "./TitleCard";
+
 export const MyComposition = () => {
-  return null;
+  return <TitleCard />;
 };
