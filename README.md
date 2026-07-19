@@ -41,7 +41,7 @@ vagrant plugin install vagrant-reload
 ## Demarrage rapide
 
 ```bash
-git clone https://github.com/<cyber31>/ad-secure-lab.git
+git clone https://github.com/Cyber31000/ad-secure-lab.git
 cd ad-secure-lab
 vagrant up
 ```
