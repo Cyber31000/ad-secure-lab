@@ -12,6 +12,9 @@
 # redemarrages. Le plugin vagrant-reload gere ces reboots de maniere ordonnee.
 # Il est installe automatiquement au premier `vagrant up` s'il manque.
 
+# ---------------------------------------------------------------------------
+# Bootstrap : installation du plugin vagrant-reload si manquant
+# ---------------------------------------------------------------------------
 required_plugins = %w(vagrant-reload)
 plugins_to_install = required_plugins.reject { |plugin| Vagrant.has_plugin?(plugin) }
 unless plugins_to_install.empty?
@@ -23,18 +26,70 @@ unless plugins_to_install.empty?
   end
 end
 
+# ---------------------------------------------------------------------------
+# Patch automatique des OVF des boxes gusztavvargadr
+# ---------------------------------------------------------------------------
+# Les box recentes gusztavvargadr incluent un item NVRAM avec ResourceType=32768
+# que VirtualBox 7.0.x ne sait pas lire, ce qui provoque
+#   "Unknown resource type 32768 in hardware item, line 49"
+# lors de l'import.
+#
+# Ce bloc detecte les box installees, retire le noeud NVRAM du box.ovf et
+# supprime le manifest (pour eviter un echec de checksum apres modification).
+# VirtualBox recreera des reglages UEFI par defaut, les VM demarrent
+# normalement. Idempotent : si l'OVF est deja patche, ne fait rien.
+def patch_box_ovf(box_name)
+  box_slug = box_name.gsub('/', '-VAGRANTSLASH-')
+  box_root = File.join(Dir.home, '.vagrant.d', 'boxes', box_slug)
+  return unless File.directory?(box_root)
+
+  Dir.glob(File.join(box_root, '*', '*', 'virtualbox', 'box.ovf')).each do |ovf|
+    content = File.read(ovf)
+    next unless content.include?('<rasd:ResourceType>32768</rasd:ResourceType>')
+
+    File.write("#{ovf}.bak", content) unless File.exist?("#{ovf}.bak")
+    content = content.gsub(
+      /^\s*<Item>[\s\S]*?<rasd:ResourceType>32768<\/rasd:ResourceType>[\s\S]*?<\/Item>\s*\n?/,
+      ''
+    )
+    content = content.gsub(/^\s*<File[^>]*\.nvram[^>]*\/>\s*\n?/, '')
+    File.write(ovf, content)
+
+    mf = ovf.sub(/\.ovf\z/, '.mf')
+    File.delete(mf) if File.exist?(mf)
+
+    puts "Patch OVF applique (NVRAM retire pour compat VirtualBox 7.0) : #{box_name}"
+  end
+end
+
+%w[
+  gusztavvargadr/windows-server-2022-standard
+  gusztavvargadr/windows-10
+].each { |box| patch_box_ovf(box) }
+
 Vagrant.configure("2") do |config|
 
+  # -------------------------------------------------------------------------
   # Parametres communs a toutes les VM
-  config.vm.boot_timeout = 600
-  config.winrm.timeout   = 600
-  config.winrm.retry_limit = 30
+  # -------------------------------------------------------------------------
+  # Timeouts genereux : le premier boot d'un Windows Server / Windows 10 est
+  # lent, et la sequence promotion DC + reload demande de la patience.
+  config.vm.boot_timeout            = 1800
+  config.vm.graceful_halt_timeout   = 600
 
-  # ---------------------------------------------------------------------------
+  # WinRM en Basic Auth sur HTTP : evite les hangs de negotiation Kerberos
+  # apres la promotion du DC (transition NTLM -> Kerberos non geree par le
+  # transport negotiate par defaut).
+  config.winrm.transport            = :plaintext
+  config.winrm.basic_auth_only      = true
+  config.winrm.timeout              = 1800
+  config.winrm.retry_limit          = 100
+
+  # -------------------------------------------------------------------------
   # Controleur de domaine : AD DS + DNS
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   config.vm.define "dc01" do |dc|
-    dc.vm.box      = "gusztavvargadr/windows-server"
+    dc.vm.box      = "gusztavvargadr/windows-server-2022-standard"
     dc.vm.hostname = "DC01"
 
     dc.vm.network "private_network", ip: "192.168.56.10"
@@ -59,11 +114,11 @@ Vagrant.configure("2") do |config|
     dc.vm.provision "shell", path: "scripts/dc/03-apply-gpo.ps1"
   end
 
-  # ---------------------------------------------------------------------------
-  # Poste client : Windows 11 joint au domaine
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # Poste client : Windows 10 joint au domaine
+  # -------------------------------------------------------------------------
   config.vm.define "cli01" do |cli|
-    cli.vm.box      = "gusztavvargadr/windows-11"
+    cli.vm.box      = "gusztavvargadr/windows-10"
     cli.vm.hostname = "CLI01"
 
     cli.vm.network "private_network", ip: "192.168.56.20"
