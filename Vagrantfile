@@ -5,14 +5,23 @@
 # Cible : 1 controleur de domaine + 1 poste client Windows joints au domaine lab.local
 # Reseau : host-only prive en 192.168.56.0/24
 #
-# Prerequis :
-#   vagrant plugin install vagrant-reload
-#
 # Demarrage :
 #   vagrant up
 #
 # La promotion d'un controleur de domaine et la jonction au domaine imposent des
 # redemarrages. Le plugin vagrant-reload gere ces reboots de maniere ordonnee.
+# Il est installe automatiquement au premier `vagrant up` s'il manque.
+
+required_plugins = %w(vagrant-reload)
+plugins_to_install = required_plugins.reject { |plugin| Vagrant.has_plugin?(plugin) }
+unless plugins_to_install.empty?
+  puts "Installation des plugins Vagrant requis : #{plugins_to_install.join(', ')}"
+  if system "vagrant plugin install #{plugins_to_install.join(' ')}"
+    exec "vagrant #{ARGV.join(' ')}"
+  else
+    abort "Echec de l'installation des plugins Vagrant : #{plugins_to_install.join(', ')}."
+  end
+end
 
 Vagrant.configure("2") do |config|
 

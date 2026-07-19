@@ -29,10 +29,10 @@ Reseau host-only : `192.168.56.0/24`
 |-------|--------------------|------|
 | VirtualBox | 7.0 ou superieure | Hyperviseur |
 | Vagrant | 2.4 ou superieure | Orchestration |
-| Plugin vagrant-reload | derniere version | Gestion des redemarrages |
+| Plugin vagrant-reload | derniere version | Gestion des redemarrages, installe automatiquement au premier `vagrant up` |
 | RAM disponible | 8 Go minimum | Les deux VM tournent en parallele |
 
-Installation du plugin requis :
+Le plugin `vagrant-reload` est installe automatiquement au premier `vagrant up` s'il manque. Installation manuelle possible si besoin :
 
 ```bash
 vagrant plugin install vagrant-reload
