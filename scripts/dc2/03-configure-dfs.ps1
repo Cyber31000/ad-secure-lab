@@ -124,10 +124,9 @@ Write-Host "==> Replication configuree. Premier sync par DFS-R en cours (peut pr
 Write-Host "==> Creation du namespace domain-based $NsPath"
 
 if (-not (Get-DfsnRoot -Path $NsPath -ErrorAction SilentlyContinue)) {
-    New-DfsnRoot -Path              $NsPath `
-                 -TargetPath        "\\DC01.$DomainName\Public" `
-                 -Type              DomainV2 `
-                 -EnableSiteCosting | Out-Null
+    New-DfsnRoot -Path       $NsPath `
+                 -TargetPath "\\DC01.$DomainName\Public" `
+                 -Type       DomainV2 | Out-Null
     Write-Host "    Namespace cree : $NsPath (cible DC01)"
 }
 
