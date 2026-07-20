@@ -112,6 +112,39 @@ Vagrant.configure("2") do |config|
 
     # Etape 3 : durcissement par GPO (politique mot de passe, LLMNR, SMBv1, LDAP, audit)
     dc.vm.provision "shell", path: "scripts/dc/03-apply-gpo.ps1"
+
+    # Etape 4 : installation de DFS-N + DFS-R et preparation des dossiers partages
+    dc.vm.provision "shell", path: "scripts/dc/04-install-dfs.ps1"
+  end
+
+  # -------------------------------------------------------------------------
+  # Controleur de domaine additionnel : replique DC01, membre DFS-R
+  # -------------------------------------------------------------------------
+  config.vm.define "dc02" do |dc2|
+    dc2.vm.box      = "gusztavvargadr/windows-server-2022-standard"
+    dc2.vm.hostname = "DC02"
+
+    dc2.vm.network "private_network", ip: "192.168.56.11"
+
+    dc2.vm.provider "virtualbox" do |vb|
+      vb.name   = "ad-lab-dc02"
+      vb.memory = 4096
+      vb.cpus   = 2
+      vb.gui    = false
+    end
+
+    # Etape 1 : pointage DNS vers DC01 + installation du role AD DS
+    dc2.vm.provision "shell", path: "scripts/dc2/01-install-adds-role.ps1"
+
+    # Etape 2 : promotion comme controleur de domaine additionnel dans lab.local
+    dc2.vm.provision "shell", path: "scripts/dc2/02-promote-additional-dc.ps1"
+
+    # Reboot pour finaliser la promotion
+    dc2.vm.provision :reload
+
+    # Etape 3 : DFS complet (roles, replication SharedData avec DC01, namespace
+    # \\lab.local\Public, fichier Welcome.txt, GPO d'ouverture au login)
+    dc2.vm.provision "shell", path: "scripts/dc2/03-configure-dfs.ps1"
   end
 
   # -------------------------------------------------------------------------
