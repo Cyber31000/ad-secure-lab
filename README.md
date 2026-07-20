@@ -8,31 +8,42 @@ Ce depot sert de support de pratique pour l'administration systeme Windows et la
 
 | Composant | Role | Systeme | Adresse |
 |-----------|------|---------|---------|
-| DC01 | Controleur de domaine, DNS | Windows Server 2022 | 192.168.56.10 |
-| CLI01 | Poste client joint au domaine | Windows 11 | 192.168.56.20 |
+| DC01 | Controleur de domaine principal, DNS, DFS | Windows Server 2022 | 192.168.56.10 |
+| DC02 | Controleur additionnel, DNS, DFS (replique DC01) | Windows Server 2022 | 192.168.56.11 |
+| CLI01 | Poste client joint au domaine | Windows 10 | 192.168.56.20 |
 
 Domaine : `lab.local`
 Reseau host-only : `192.168.56.0/24`
 
 ## Ce que le lab met en place automatiquement
 
-- Promotion d'un controleur de domaine et configuration DNS
+- Installation automatique du plugin `vagrant-reload` s'il manque
+- Patch automatique des OVF des box Windows pour compatibilite VirtualBox 7.0
+- Promotion d'un controleur de domaine principal et configuration DNS
+- Promotion d'un controleur additionnel dans la meme foret (redondance AD + DNS)
 - Structure d'unites d'organisation par fonction (IT, Finance, Operations)
 - Groupes de securite et comptes utilisateurs importes depuis un fichier CSV
 - Politique de mot de passe et de verrouillage durcie
 - GPO de durcissement contre des vecteurs d'attaque connus (empoisonnement LLMNR, SMBv1, relais LDAP, enumeration anonyme)
+- Infrastructure DFS : namespace domain-based `\\lab.local\Public` avec cibles multiples + replication DFS-R du dossier SharedData entre DC01 et DC02
+- Fichier de bienvenue `Welcome.txt` place dans le partage replique
+- GPO qui ouvre `Welcome.txt` automatiquement a chaque ouverture de session sur le domaine
 - Jonction automatique du poste client au domaine
 
 ## Prerequis
 
 | Outil | Version conseillee | Role |
 |-------|--------------------|------|
-| VirtualBox | 7.0 ou superieure | Hyperviseur |
+| VirtualBox | **7.0.x uniquement** (7.2 non compatible avec les box Windows recentes) | Hyperviseur |
 | Vagrant | 2.4 ou superieure | Orchestration |
-| Plugin vagrant-reload | derniere version | Gestion des redemarrages |
-| RAM disponible | 8 Go minimum | Les deux VM tournent en parallele |
+| Plugin vagrant-reload | derniere version | Gestion des redemarrages, installe automatiquement au premier `vagrant up` |
+| RAM disponible | 16 Go minimum, 20-32 Go recommandes | Trois VM tournent en parallele (12 Go alloues) |
 
-Installation du plugin requis :
+Note importante sur VirtualBox : la branche 7.2 rejette l'OVF des box Windows recentes de gusztavvargadr avec l'erreur `Unknown resource type 32768`. Utiliser VirtualBox 7.0.x (dernier build 7.0.26 disponible sur https://www.virtualbox.org/wiki/Download_Old_Builds_7_0). Le Vagrantfile patche automatiquement l'OVF telecharge pour retirer l'entree NVRAM incompatible, aucune action manuelle requise.
+
+Note sur les hotes Windows 11 : si `Memory Integrity` (Securite Windows -> Securite de l'appareil -> Isolation du noyau) est active, VirtualBox tourne en mode degrade et les VM restent bloquees a l'ecran noir. Desactiver Memory Integrity puis redemarrer avant `vagrant up`. Voir [depannage](docs/troubleshooting.md).
+
+Le plugin `vagrant-reload` est installe automatiquement au premier `vagrant up` s'il manque. Installation manuelle possible si besoin :
 
 ```bash
 vagrant plugin install vagrant-reload
@@ -41,7 +52,7 @@ vagrant plugin install vagrant-reload
 ## Demarrage rapide
 
 ```bash
-git clone https://github.com/<cyber31>/ad-secure-lab.git
+git clone https://github.com/Cyber31000/ad-secure-lab.git
 cd ad-secure-lab
 vagrant up
 ```
@@ -80,14 +91,19 @@ vagrant destroy -f  # suppression complete
 
 ```
 ad-secure-lab/
-├── Vagrantfile              orchestration des deux VM
+├── Vagrantfile              orchestration des trois VM
 ├── data/
 │   └── users.csv            comptes utilisateurs a importer
 ├── scripts/
-│   ├── dc/                  provisioning du controleur de domaine
+│   ├── dc/                  provisioning du controleur principal (DC01)
 │   │   ├── 01-install-adds.ps1
 │   │   ├── 02-configure-ad.ps1
-│   │   └── 03-apply-gpo.ps1
+│   │   ├── 03-apply-gpo.ps1
+│   │   └── 04-install-dfs.ps1
+│   ├── dc2/                 provisioning du controleur additionnel (DC02)
+│   │   ├── 01-install-adds-role.ps1
+│   │   ├── 02-promote-additional-dc.ps1
+│   │   └── 03-configure-dfs.ps1
 │   └── client/
 │       └── 01-join-domain.ps1
 └── docs/                    documentation technique
