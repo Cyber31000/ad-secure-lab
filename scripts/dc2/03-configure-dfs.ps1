@@ -76,44 +76,68 @@ if (-not (Get-SmbShare -Name "Public" -ErrorAction SilentlyContinue)) {
 # ---------------------------------------------------------------------------
 Write-Host "==> Configuration du groupe de replication $RgName"
 
-if (-not (Get-DfsReplicationGroup -GroupName $RgName -ErrorAction SilentlyContinue)) {
+# Note : les cmdlets DFSR interrogent AD, mais Add-* et Set-* peuvent aussi
+# ouvrir une RPC vers les membres. Sur un lab, ces appels peuvent renvoyer
+# "The network path was not found" alors que la config est deja en place.
+# On enveloppe donc dans try/catch pour rendre l'ensemble idempotent :
+# si la config est deja OK, on continue sans faire de bruit.
+
+if (-not (Get-DfsReplicationGroup -GroupName $RgName -DomainName $DomainName -ErrorAction SilentlyContinue)) {
     New-DfsReplicationGroup -GroupName $RgName `
                             -Description "Replication du dossier SharedData entre DC01 et DC02" | Out-Null
     Write-Host "    Groupe de replication cree : $RgName"
+} else {
+    Write-Host "    Groupe de replication deja present : $RgName"
 }
 
-if (-not (Get-DfsReplicatedFolder -GroupName $RgName -FolderName $FolderName -ErrorAction SilentlyContinue)) {
+if (-not (Get-DfsReplicatedFolder -GroupName $RgName -FolderName $FolderName -DomainName $DomainName -ErrorAction SilentlyContinue)) {
     New-DfsReplicatedFolder -GroupName $RgName -FolderName $FolderName | Out-Null
     Write-Host "    Dossier replique declare : $FolderName"
+} else {
+    Write-Host "    Dossier replique deja declare : $FolderName"
 }
 
 foreach ($member in "DC01", "DC02") {
-    if (-not (Get-DfsrMember -GroupName $RgName -ComputerName $member -ErrorAction SilentlyContinue)) {
-        Add-DfsrMember -GroupName $RgName -ComputerName $member | Out-Null
+    try {
+        Add-DfsrMember -GroupName $RgName -ComputerName $member -ErrorAction Stop | Out-Null
         Write-Host "    Membre ajoute : $member"
+    } catch {
+        $msg = $_.Exception.Message.Split("`n")[0].Trim()
+        Write-Host "    Membre $member : $msg (probablement deja present)"
     }
 }
 
 # Configurer les chemins locaux sur chaque membre. DC01 est primaire (source).
-Set-DfsrMembership -GroupName     $RgName `
-                   -FolderName    $FolderName `
-                   -ComputerName  "DC01" `
-                   -ContentPath   $SharedPath `
-                   -PrimaryMember $true `
-                   -Force | Out-Null
-
-Set-DfsrMembership -GroupName    $RgName `
-                   -FolderName   $FolderName `
-                   -ComputerName "DC02" `
-                   -ContentPath  $SharedPath `
-                   -Force | Out-Null
+foreach ($m in @(
+    @{ Name = "DC01"; Primary = $true },
+    @{ Name = "DC02"; Primary = $false }
+)) {
+    try {
+        $params = @{
+            GroupName     = $RgName
+            FolderName    = $FolderName
+            ComputerName  = $m.Name
+            ContentPath   = $SharedPath
+            Force         = $true
+            ErrorAction   = "Stop"
+        }
+        if ($m.Primary) { $params.PrimaryMember = $true }
+        Set-DfsrMembership @params | Out-Null
+        Write-Host "    Membership $($m.Name) configuree$(if($m.Primary){' (source)'})"
+    } catch {
+        Write-Host "    Set-DfsrMembership $($m.Name) : $($_.Exception.Message.Split("`n")[0].Trim()) (probablement deja configure)"
+    }
+}
 
 # Connexion bidirectionnelle DC01 <-> DC02
-if (-not (Get-DfsrConnection -GroupName $RgName -SourceComputerName "DC01" -DestinationComputerName "DC02" -ErrorAction SilentlyContinue)) {
-    Add-DfsrConnection -GroupName $RgName `
+try {
+    Add-DfsrConnection -GroupName               $RgName `
                        -SourceComputerName      "DC01" `
-                       -DestinationComputerName "DC02" | Out-Null
+                       -DestinationComputerName "DC02" `
+                       -ErrorAction Stop | Out-Null
     Write-Host "    Connexion de replication DC01 <-> DC02 creee"
+} catch {
+    Write-Host "    Connexion DC01 <-> DC02 : $($_.Exception.Message.Split("`n")[0].Trim()) (probablement deja presente)"
 }
 
 Write-Host "==> Replication configuree. Premier sync par DFS-R en cours (peut prendre plusieurs minutes)."
