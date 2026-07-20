@@ -144,7 +144,7 @@ if (-not (Get-DfsnFolder -Path $folderPath -ErrorAction SilentlyContinue)) {
 }
 
 if (-not (Get-DfsnFolderTarget -Path $folderPath -TargetPath "\\DC02.$DomainName\SharedData" -ErrorAction SilentlyContinue)) {
-    Add-DfsnFolderTarget -Path       $folderPath `
+    New-DfsnFolderTarget -Path       $folderPath `
                          -TargetPath "\\DC02.$DomainName\SharedData" | Out-Null
     Write-Host "    Cible ajoutee au dossier DFS : DC02"
 }
