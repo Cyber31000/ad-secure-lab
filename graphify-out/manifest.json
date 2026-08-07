@@ -1,0 +1,47 @@
+{
+  "scripts/client/01-join-domain.ps1": {
+    "mtime": 1786096006.4246724,
+    "ast_hash": "7acbb91a5cf8de3cb8f4d79ca00dd545",
+    "semantic_hash": "7acbb91a5cf8de3cb8f4d79ca00dd545"
+  },
+  "scripts/dc/01-install-adds.ps1": {
+    "mtime": 1786096006.4246724,
+    "ast_hash": "ea510b6c35dba0ddbaf363f3fe5be2e9",
+    "semantic_hash": "ea510b6c35dba0ddbaf363f3fe5be2e9"
+  },
+  "scripts/dc/02-configure-ad.ps1": {
+    "mtime": 1786096006.4258301,
+    "ast_hash": "913fbf61758d0a5599d8917ba5883908",
+    "semantic_hash": "913fbf61758d0a5599d8917ba5883908"
+  },
+  "scripts/dc/03-apply-gpo.ps1": {
+    "mtime": 1786096006.4258301,
+    "ast_hash": "7ceabedaefee26a35ac1a0d7d37959ce",
+    "semantic_hash": "7ceabedaefee26a35ac1a0d7d37959ce"
+  },
+  "README.md": {
+    "mtime": 1786096006.4193654,
+    "ast_hash": "587c6a9ad2869577af786657e0514782",
+    "semantic_hash": "587c6a9ad2869577af786657e0514782"
+  },
+  "docs/architecture.md": {
+    "mtime": 1786096006.4193654,
+    "ast_hash": "3621745c3e01b2d7f259a36bde1bb679",
+    "semantic_hash": "3621745c3e01b2d7f259a36bde1bb679"
+  },
+  "docs/gpo-hardening.md": {
+    "mtime": 1786096006.4235444,
+    "ast_hash": "7ba57179d1073f22b1004dd27b63cf64",
+    "semantic_hash": "7ba57179d1073f22b1004dd27b63cf64"
+  },
+  "docs/ou-design.md": {
+    "mtime": 1786096006.4235444,
+    "ast_hash": "40931498939730f5e27766c881e60f4c",
+    "semantic_hash": "40931498939730f5e27766c881e60f4c"
+  },
+  "docs/troubleshooting.md": {
+    "mtime": 1786096006.4235444,
+    "ast_hash": "78baef18c205cf5ff11b2cdc2137ff5b",
+    "semantic_hash": "78baef18c205cf5ff11b2cdc2137ff5b"
+  }
+}

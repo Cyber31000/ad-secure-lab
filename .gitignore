@@ -1,0 +1,4 @@
+# graphify: caches et chemins locaux a la machine, regeneres a chaque execution
+graphify-out/cache/
+graphify-out/.graphify_python
+graphify-out/.graphify_root
