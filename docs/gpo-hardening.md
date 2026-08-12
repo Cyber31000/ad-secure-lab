@@ -59,7 +59,7 @@ Effet : limite ce qu'une session anonyme peut lister sur le système.
 
 Vecteur contre : la reconnaissance préalable à une attaque. Une session anonyme trop permissive permet de lister les comptes et les groupes sans s'authentifier. Cette information sert ensuite à cibler le test de mots de passe ou à repérer les comptes à privilèges. Restreindre cette énumération réduit la surface de reconnaissance.
 
-Reference : CIS Benchmarks pour Windows, recommandations ANSSI.
+Référence : CIS Benchmarks pour Windows, recommandations ANSSI.
 
 ## Durcissement de l'ouverture de session
 
@@ -69,7 +69,7 @@ Effet : masque le dernier nom d'utilisateur connecté sur l'écran d'ouverture d
 
 Vecteur contre : la fuite passive de noms de comptes. Afficher le dernier compte connecté donne gratuitement la moitié d'un identifiant à toute personne ayant un accès physique à l'écran. Le masquer impose de connaître le nom complet pour se connecter.
 
-Reference : CIS Benchmarks pour Windows.
+Référence : CIS Benchmarks pour Windows.
 
 ## Ce que le lab ne fait pas, et pourquoi
 
