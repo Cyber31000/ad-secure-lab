@@ -16,7 +16,7 @@ Reseau host-only : `192.168.56.0/24`
 
 ## Ce que le lab met en place automatiquement
 
-- Promotion d'un controleur de domaine et configuration DNS
+- Promotion d'un contrôleur de domaine et configuration DNS
 - Structure d'unites d'organisation par fonction (IT, Finance, Operations)
 - Groupes de securite et comptes utilisateurs importes depuis un fichier CSV
 - Politique de mot de passe et de verrouillage durcie
