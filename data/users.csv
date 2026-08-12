@@ -1,9 +1,9 @@
 FirstName,LastName,SamAccountName,Department,JobTitle
-Marie,Lefevre,m.lefevre,IT,Administratrice systeme
+Marie,Lefevre,m.lefevre,IT,Administratrice système
 Thomas,Garnier,t.garnier,IT,Technicien support
 Camille,Rousseau,c.rousseau,Finance,Comptable
-Julien,Moreau,j.moreau,Finance,Controleur de gestion
-Sophie,Bernard,s.bernard,Operations,Responsable logistique
-Lucas,Petit,l.petit,Operations,Agent d exploitation
-Emma,Durand,e.durand,IT,Apprentie reseau
-Nicolas,Faure,n.faure,Operations,Cariste
+Julien,Moreau,j.moreau,Finance,Contrôleur de gestion
+Sophie,Bernard,s.bernard,Opérations,Responsable logistique
+Lucas,Petit,l.petit,Operations,Agent d'exploitation
+Emma,Durand,e.durand,IT,Apprentie réseau
+Nicolas,Faure,n.faure,Opérations,Cariste
