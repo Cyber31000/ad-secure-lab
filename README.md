@@ -1,6 +1,6 @@
 # Lab Active Directory securise
 
-Infrastructure as code pour deployer en une commande un environnement Active Directory durci sur poste local. Le projet provisionne un controleur de domaine, un poste client joint au domaine, une structure d'annuaire realiste et un socle de durcissement applique par GPO.
+Infrastructure as code pour deployer en une commande un environnement Active Directory durci sur poste local. Le projet provisionne un contrôleur de domaine, un poste client joint au domaine, une structure d'annuaire realiste et un socle de durcissement applique par GPO.
 
 Ce depot sert de support de pratique pour l'administration systeme Windows et la securisation d'un annuaire. Il documente les choix techniques et leur justification securite, pas seulement le code.
 
@@ -51,7 +51,7 @@ La premiere execution telecharge les images Windows, ce qui prend du temps selon
 ## Acces aux machines
 
 ```bash
-# Ouvrir une session RDP ou WinRM vers le controleur
+# Ouvrir une session RDP ou WinRM vers le contrôleur
 vagrant rdp dc01
 
 # Ouvrir une session vers le client
@@ -84,7 +84,7 @@ ad-secure-lab/
 ├── data/
 │   └── users.csv            comptes utilisateurs a importer
 ├── scripts/
-│   ├── dc/                  provisioning du controleur de domaine
+│   ├── dc/                  provisioning du contrôleur de domaine
 │   │   ├── 01-install-adds.ps1
 │   │   ├── 02-configure-ad.ps1
 │   │   └── 03-apply-gpo.ps1
