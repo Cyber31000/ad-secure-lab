@@ -1,83 +1,83 @@
 # Durcissement par GPO
 
-Chaque mesure de durcissement appliquee par le lab contre un vecteur d'attaque precis. Ce document explique, pour chaque mesure, ce qu'elle fait, l'attaque qu'elle bloque, et la reference qui la recommande. Comprendre la menace derriere une mesure est la difference entre appliquer une recette et savoir defendre un systeme.
+Chaque mesure de durcissement appliquée par le lab contre un vecteur d'attaque précis. Ce document explique, pour chaque mesure, ce qu'elle fait, l'attaque qu'elle bloque, et la référence qui la recommande. Comprendre la menace derrière une mesure est la différence entre appliquer une recette et savoir défendre un système.
 
 ## Politique de mot de passe et de verrouillage
 
-Posee sur la politique de domaine par defaut.
+Posée sur la politique de domaine par défaut.
 
-| Parametre | Valeur | Effet |
+| Paramètre | Valeur | Effet |
 |-----------|--------|-------|
-| Longueur minimale | 14 caracteres | Allonge le temps de cassage hors ligne |
-| Complexite | activee | Impose plusieurs types de caracteres |
-| Historique | 24 | Empeche la reutilisation immediate |
-| Age maximal | 90 jours | Limite la duree de vie d'un secret compromis |
+| Longueur minimale | 14 caractères | Allonge le temps de cassage hors ligne |
+| Complexité | activée | Impose plusieurs types de caractères |
+| Historique | 24 | Empêche la réutilisation immédiate |
+| Âge maximal | 90 jours | Limite la durée de vie d'un secret compromis |
 | Seuil de verrouillage | 5 tentatives | Bloque le test de mots de passe en masse |
-| Duree de verrouillage | 15 minutes | Ralentit fortement une attaque en ligne |
+| Durée de verrouillage | 15 minutes | Ralentit fortement une attaque en ligne |
 
-Vecteur contre : le test de mots de passe en ligne et la cassage de condensats hors ligne. Un mot de passe court et simple tombe en quelques secondes sur du materiel courant. La longueur est le facteur le plus efficace.
+Vecteur contre : le test de mots de passe en ligne et le cassage de condensats hors ligne. Un mot de passe court et simple tombe en quelques secondes sur du matériel courant. La longueur est le facteur le plus efficace.
 
-Reference : guide ANSSI sur la securisation d'Active Directory, recommandations CIS Benchmarks pour Windows Server.
+Référence : guide ANSSI sur la sécurisation d'Active Directory, recommandations CIS Benchmarks pour Windows Server.
 
-## Desactivation de LLMNR
+## Désactivation de LLMNR
 
-Valeur de registre `EnableMulticast` a 0.
+Valeur de registre `EnableMulticast` à 0.
 
-Effet : desactive le protocole de resolution de noms multicast local.
+Effet : désactive le protocole de résolution de noms multicast local.
 
-Vecteur contre : l'empoisonnement de resolution de noms. Quand une machine ne resout pas un nom par DNS, elle interroge le reseau local en multicast. Un attaquant present sur le segment repond a la place du vrai service et capture des condensats d'authentification, qu'il casse ensuite ou rejoue. C'est l'une des premieres techniques utilisees lors d'un test d'intrusion interne.
+Vecteur contre : l'empoisonnement de résolution de noms. Quand une machine ne résout pas un nom par DNS, elle interroge le réseau local en multicast. Un attaquant présent sur le segment répond à la place du vrai service et capture des condensats d'authentification, qu'il casse ensuite ou rejoue. C'est l'une des premières techniques utilisées lors d'un test d'intrusion interne.
 
-Desactiver ce protocole supprime ce canal. La resolution legitime passe par le DNS du domaine, qui reste disponible.
+Désactiver ce protocole supprime ce canal. La résolution légitime passe par le DNS du domaine, qui reste disponible.
 
-Reference : recommandation ANSSI, technique largement documentee dans les referentiels d'attaque.
+Référence : recommandation ANSSI, technique largement documentée dans les référentiels d'attaque.
 
-## Desactivation de SMBv1
+## Désactivation de SMBv1
 
-Valeur de registre `SMB1` a 0 cote serveur.
+Valeur de registre `SMB1` à 0 côté serveur.
 
-Effet : desactive la premiere version du protocole de partage de fichiers.
+Effet : désactive la première version du protocole de partage de fichiers.
 
-Vecteur contre : l'exploitation de vulnerabilites connues de cette version ancienne du protocole. SMBv1 a porte des failles critiques ayant servi a des propagations massives. Cette version n'a aucune raison d'etre active sur un systeme moderne. Les versions recentes du protocole assurent les memes fonctions de maniere sure.
+Vecteur contre : l'exploitation de vulnérabilités connues de cette version ancienne du protocole. SMBv1 a porté des failles critiques ayant servi à des propagations massives. Cette version n'a aucune raison d'être active sur un système moderne. Les versions récentes du protocole assurent les mêmes fonctions de manière sûre.
 
-Reference : Microsoft recommande la desactivation depuis plusieurs annees, reprise par l'ANSSI et les CIS Benchmarks.
+Référence : Microsoft recommande la désactivation depuis plusieurs années, reprise par l'ANSSI et les CIS Benchmarks.
 
 ## Signature LDAP requise
 
-Valeur de registre `LDAPServerIntegrity` a 2.
+Valeur de registre `LDAPServerIntegrity` à 2.
 
-Effet : impose la signature des echanges LDAP cote serveur d'annuaire.
+Effet : impose la signature des échanges LDAP côté serveur d'annuaire.
 
-Vecteur contre : le relais d'authentification vers LDAP. Sans signature, un attaquant peut intercepter une authentification et la rejouer contre le service d'annuaire pour agir au nom de la victime. Exiger la signature rend ce relais inoperant car l'echange non signe est refuse.
+Vecteur contre : le relais d'authentification vers LDAP. Sans signature, un attaquant peut intercepter une authentification et la rejouer contre le service d'annuaire pour agir au nom de la victime. Exiger la signature rend ce relais inopérant car l'échange non signé est refusé.
 
-Reference : Microsoft a publie des durcissements pour ce canal, repris par l'ANSSI dans ses recommandations sur l'annuaire.
+Référence : Microsoft a publié des durcissements pour ce canal, repris par l'ANSSI dans ses recommandations sur l'annuaire.
 
-## Restriction de l'enumeration anonyme
+## Restriction de l'énumération anonyme
 
-Valeurs de registre `RestrictAnonymous` et `RestrictAnonymousSAM` a 1.
+Valeurs de registre `RestrictAnonymous` et `RestrictAnonymousSAM` à 1.
 
-Effet : limite ce qu'une session anonyme peut lister sur le systeme.
+Effet : limite ce qu'une session anonyme peut lister sur le système.
 
-Vecteur contre : la reconnaissance prealable a une attaque. Une session anonyme trop permissive permet de lister les comptes et les groupes sans s'authentifier. Cette information sert ensuite a cibler le test de mots de passe ou a reperer les comptes a privileges. Restreindre cette enumeration reduit la surface de reconnaissance.
+Vecteur contre : la reconnaissance préalable à une attaque. Une session anonyme trop permissive permet de lister les comptes et les groupes sans s'authentifier. Cette information sert ensuite à cibler le test de mots de passe ou à repérer les comptes à privilèges. Restreindre cette énumération réduit la surface de reconnaissance.
 
 Reference : CIS Benchmarks pour Windows, recommandations ANSSI.
 
 ## Durcissement de l'ouverture de session
 
-Valeur de registre `DontDisplayLastUserName` a 1.
+Valeur de registre `DontDisplayLastUserName` à 1.
 
-Effet : masque le dernier nom d'utilisateur connecte sur l'ecran d'ouverture de session.
+Effet : masque le dernier nom d'utilisateur connecté sur l'écran d'ouverture de session.
 
-Vecteur contre : la fuite passive de noms de comptes. Afficher le dernier compte connecte donne gratuitement la moitie d'un identifiant a toute personne ayant un acces physique a l'ecran. Le masquer impose de connaitre le nom complet pour se connecter.
+Vecteur contre : la fuite passive de noms de comptes. Afficher le dernier compte connecté donne gratuitement la moitié d'un identifiant à toute personne ayant un accès physique à l'écran. Le masquer impose de connaître le nom complet pour se connecter.
 
 Reference : CIS Benchmarks pour Windows.
 
 ## Ce que le lab ne fait pas, et pourquoi
 
-Ce socle est volontairement lisible et entierement scriptable par valeurs de registre. Plusieurs durcissements importants reposent sur des extensions de securite de GPO plus complexes a poser par script, ou sur des composants supplementaires. Ils sont laisses comme axes d'extension :
+Ce socle est volontairement lisible et entièrement scriptable par valeurs de registre. Plusieurs durcissements importants reposent sur des extensions de sécurité de GPO plus complexes à poser par script, ou sur des composants supplémentaires. Ils sont laissés comme axes d'extension :
 
-- la politique d'audit fine, pour journaliser les evenements d'authentification et de gestion de comptes
-- le deploiement d'une solution de gestion des mots de passe d'administrateur local
-- la separation des comptes d'administration en couches
-- la desactivation de la mise en cache des condensats d'authentification
+- la politique d'audit fine, pour journaliser les événements d'authentification et de gestion de comptes
+- le déploiement d'une solution de gestion des mots de passe d'administrateur local
+- la séparation des comptes d'administration en couches
+- la désactivation de la mise en cache des condensats d'authentification
 
-Les nommer plutot que les ignorer est volontaire. Un socle honnete indique ses limites et la suite logique.
+Les nommer plutôt que les ignorer est volontaire. Un socle honnête indique ses limites et la suite logique.
