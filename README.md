@@ -1,5 +1,7 @@
 # Lab Active Directory securise
 
+![Schema d'architecture du lab : DC01 sous Windows Server 2022 et CLI01 sous Windows 11 sur un reseau host-only isole, domaine lab.local](docs/architecture.png)
+
 Infrastructure as code pour deployer en une commande un environnement Active Directory durci sur poste local. Le projet provisionne un contrôleur de domaine, un poste client joint au domaine, une structure d'annuaire realiste et un socle de durcissement applique par GPO.
 
 Ce depot sert de support de pratique pour l'administration systeme Windows et la securisation d'un annuaire. Il documente les choix techniques et leur justification securite, pas seulement le code.
