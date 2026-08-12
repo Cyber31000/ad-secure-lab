@@ -43,7 +43,7 @@ vagrant plugin install vagrant-reload
 ## Demarrage rapide
 
 ```bash
-git clone https://github.com/<cyber31>/ad-secure-lab.git
+git clone https://github.com/Cyber31000/ad-secure-lab.git
 cd ad-secure-lab
 vagrant up
 ```
@@ -94,8 +94,9 @@ ad-secure-lab/
 │       └── 01-join-domain.ps1
 └── docs/                    documentation technique
     ├── architecture.md      schema reseau et choix d'infrastructure
+    ├── architecture.png     schema d'architecture du lab (image)
     ├── ou-design.md         logique de la structure d'annuaire
-    ├── gpo-hardening.md      justification de chaque mesure de durcissement
+    ├── gpo-hardening.md     justification de chaque mesure de durcissement
     └── troubleshooting.md   pannes courantes et resolution
 ```
 
