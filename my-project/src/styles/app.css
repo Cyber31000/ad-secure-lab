@@ -1,0 +1,231 @@
+/*
+ * Baseline layout for the application shell, main page, and album view.
+ * Preconditions: tokens.css is loaded first.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-title {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.app-header .spacer {
+  flex: 1;
+}
+
+button {
+  font: inherit;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+button.danger {
+  color: var(--danger);
+}
+
+main {
+  padding: var(--space-6);
+}
+
+/* ---------- Main page: date groups and album cards ---------- */
+
+.date-group {
+  margin-bottom: var(--space-8);
+}
+
+.date-group h2 {
+  font-size: 1rem;
+  color: var(--fg-muted);
+  margin: 0 0 var(--space-3);
+}
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--album-card-width), 1fr));
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.album-card {
+  /* Offscreen cards skip layout and paint entirely — this is what keeps the
+     main page responsive at 100 albums (FR-016, SC-002). */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 260px;
+
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none; /* pointer-based drag owns the gesture */
+}
+
+.album-card.dragging {
+  opacity: 0.55;
+  cursor: grabbing;
+}
+
+.album-card.keyboard-grabbed {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.album-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--bg-sunken);
+}
+
+.album-cover.placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--fg-muted);
+  font-size: 0.8rem;
+}
+
+.album-meta {
+  padding: var(--space-3);
+}
+
+.album-name {
+  display: block;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.album-count {
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+}
+
+/* Drawn inside the card so showing it never reflows the grid — the hit-test
+   during a drag depends on card geometry staying still. */
+.album-card.drop-indicator {
+  box-shadow: inset 4px 0 0 0 var(--drop-indicator);
+}
+
+.album-card.drop-indicator.drop-after {
+  box-shadow: inset -4px 0 0 0 var(--drop-indicator);
+}
+
+/* ---------- Album view: uniform tiles ---------- */
+
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile-size), 1fr));
+  gap: var(--tile-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tile {
+  /* A button is inline-block and would collapse to zero width with no content;
+     block + full width is what gives aspect-ratio something to work from. */
+  display: block;
+  width: 100%;
+  /* Uniform footprint regardless of source orientation (FR-009). */
+  aspect-ratio: 1 / 1;
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--tile-size);
+  border: 0;
+  padding: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-sunken);
+}
+
+.tile img {
+  width: 100%;
+  height: 100%;
+  /* Fills the square without distorting the photo. */
+  object-fit: cover;
+  display: block;
+}
+
+/* ---------- Photo view ---------- */
+
+.photo-view {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: center;
+}
+
+.photo-view img {
+  max-width: 100%;
+  max-height: 75vh;
+  object-fit: contain;
+}
+
+/* ---------- Empty state ---------- */
+
+.empty-state {
+  max-width: 34rem;
+  margin: var(--space-8) auto;
+  text-align: center;
+  color: var(--fg-muted);
+}
+
+.empty-state h2 {
+  color: var(--fg);
+}
+
+/* ---------- Accessibility helpers ---------- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.error-banner {
+  margin: var(--space-4) var(--space-6);
+  padding: var(--space-3);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  color: var(--danger);
+}
