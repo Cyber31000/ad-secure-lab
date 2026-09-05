@@ -53,7 +53,7 @@ La première exécution télécharge les images Windows, ce qui prend du temps s
 ## Accès aux machines
 
 ```bash
-# Ouvrir une session RDP ou WinRM vers le contrôleur
+# Ouvrir une session RDP vers le contrôleur
 vagrant rdp dc01
 
 # Ouvrir une session vers le client
