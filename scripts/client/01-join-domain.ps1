@@ -48,9 +48,6 @@ Start-Sleep -Seconds 5
 # Jonction au domaine
 # ---------------------------------------------------------------------------
 Write-Host "==> Jonction au domaine $DomainName"
-$securePwd = ConvertTo-SecureString "vagrant" -AsPlainText -Force
-$cred = New-Object System.Management.Automation.PSCredential("LAB\vagrant", $securePwd)
-
 # Remarque : le compte Administrateur du domaine est cree avec le mot de passe par
 # defaut de la box gusztavvargadr (vagrant). Adapter si la box change.
 $adminPwd = ConvertTo-SecureString "vagrant" -AsPlainText -Force

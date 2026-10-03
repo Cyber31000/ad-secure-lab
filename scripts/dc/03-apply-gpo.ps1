@@ -98,7 +98,7 @@ Set-GPRegistryValue -Name $g `
     -Type      DWord -Value 1 | Out-Null
 
 # ---------------------------------------------------------------------------
-# GPO 5 : desactivation du compte invite par strategie de registre
+# GPO 5 : durcissement de l'ouverture de session
 # ---------------------------------------------------------------------------
 $g = "SEC - Durcissement ouverture de session"
 New-LabGPO -Name $g

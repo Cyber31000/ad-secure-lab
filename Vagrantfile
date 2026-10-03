@@ -46,7 +46,7 @@ Vagrant.configure("2") do |config|
     # Etape 2 : structure d'OU, groupes, comptes utilisateurs, forwarder DNS
     dc.vm.provision "shell", path: "scripts/dc/02-configure-ad.ps1"
 
-    # Etape 3 : durcissement par GPO (politique mot de passe, LLMNR, SMBv1, LDAP, audit)
+    # Etape 3 : durcissement par GPO (politique mot de passe, LLMNR, SMBv1, LDAP, enumeration anonyme, ouverture de session)
     dc.vm.provision "shell", path: "scripts/dc/03-apply-gpo.ps1"
   end
 
