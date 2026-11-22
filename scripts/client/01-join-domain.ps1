@@ -41,6 +41,15 @@ if (-not $ip) {
 Write-Host "    Interface trouvee (index $($ip.InterfaceIndex)). Pointage DNS vers $DcIp"
 Set-DnsClientServerAddress -InterfaceIndex $ip.InterfaceIndex -ServerAddresses $DcIp
 
+# La carte NAT Vagrant (10.0.2.15, identique sur toutes les VM) ne doit pas
+# s'enregistrer dans le DNS du domaine.
+Get-NetIPAddress -AddressFamily IPv4 |
+    Where-Object { $_.IPAddress -like "10.0.2.*" } |
+    ForEach-Object {
+        Set-DnsClient -InterfaceIndex $_.InterfaceIndex -RegisterThisConnectionsAddress $false
+        Write-Host "    Carte NAT (index $($_.InterfaceIndex)) exclue de l'enregistrement DNS."
+    }
+
 # Petite attente pour laisser le DNS repondre
 Start-Sleep -Seconds 5
 

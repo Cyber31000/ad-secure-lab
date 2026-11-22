@@ -22,6 +22,21 @@ $NetbiosName    = "LAB"
 $ForestMode     = "WinThreshold"   # niveau fonctionnel 2016, valide jusqu'a Server 2022
 $DsrmPassword   = ConvertTo-SecureString "DSRM-L@b-2025!Restore" -AsPlainText -Force
 
+# ---------------------------------------------------------------------------
+# Carte NAT Vagrant exclue du DNS
+# ---------------------------------------------------------------------------
+# Chaque VM Vagrant recoit la meme adresse NAT (10.0.2.15). Si le controleur
+# l'enregistre dans le DNS du domaine, les clients et les autres DC qui le
+# cherchent se connectent a eux-memes : echec de jonction au domaine et erreur
+# de replication "The target principal name is incorrect".
+Write-Host "==> Exclusion de la carte NAT de l'enregistrement DNS"
+Get-NetIPAddress -AddressFamily IPv4 |
+    Where-Object { $_.IPAddress -like "10.0.2.*" } |
+    ForEach-Object {
+        Set-DnsClient -InterfaceIndex $_.InterfaceIndex -RegisterThisConnectionsAddress $false
+        Write-Host "    Interface $($_.InterfaceIndex) ($($_.IPAddress)) exclue."
+    }
+
 Write-Host "==> Verification du role AD DS"
 $addsInstalled = (Get-WindowsFeature -Name AD-Domain-Services).Installed
 if ($addsInstalled) {

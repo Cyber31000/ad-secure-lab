@@ -76,6 +76,28 @@ Cause : le script client utilise le compte Administrateur du domaine avec le mot
 
 Résolution : vérifier les identifiants par défaut de la box utilisée et ajuster le script de jonction en conséquence.
 
+## Le contrôleur s'annonce avec l'adresse 10.0.2.15
+
+Symptôme : `nltest /dsgetdc:lab.local` renvoie `Address: \\10.0.2.15`, le client ne joint plus le domaine, ou la réplication entre deux DC échoue avec `The target principal name is incorrect` (erreur 2148074274).
+
+Cause : Vagrant ajoute à chaque VM une carte NAT avec la même adresse, 10.0.2.15. Si un contrôleur l'enregistre dans le DNS, une machine qui le cherche obtient cette adresse et se connecte à elle-même. Pour la réplication, DC01 présente alors un ticket Kerberos destiné à DC02 qu'il ne peut pas déchiffrer.
+
+Diagnostic : interroger le serveur DNS directement, pas le cache local.
+
+```powershell
+Resolve-DnsName dc01.lab.local -Server 192.168.56.10 -DnsOnly
+```
+
+Résolution : les scripts de provisioning excluent désormais la carte NAT de l'enregistrement DNS et limitent l'écoute du serveur DNS à 192.168.56.10. Sur une VM déjà déployée :
+
+```powershell
+Set-DnsClient -InterfaceAlias "Ethernet" -RegisterThisConnectionsAddress $false
+dnscmd /ResetListenAddresses 192.168.56.10
+Restart-Service DNS
+```
+
+Puis supprimer les enregistrements A en 10.0.2.15 dans les zones `lab.local` et `_msdcs.lab.local`, et relancer `ipconfig /registerdns`.
+
 ## Repartir de zero
 
 Pour tout supprimer et recommencer :
