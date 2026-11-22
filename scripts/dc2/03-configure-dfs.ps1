@@ -32,6 +32,24 @@ $FolderName = "SharedData"
 $NsPath     = "\\$DomainName\Public"
 
 # ---------------------------------------------------------------------------
+# Serveur DNS de DC02 limite a l'interface du lab
+# ---------------------------------------------------------------------------
+# La promotion installe le role DNS : il ne doit repondre que sur 192.168.56.11.
+# Les enregistrements A en 10.0.2.x poses pendant la promotion sont supprimes.
+Write-Host "==> Limitation du serveur DNS de DC02 a 192.168.56.11"
+dnscmd /ResetListenAddresses 192.168.56.11 | Out-Null
+Restart-Service DNS
+
+foreach ($zone in @($DomainName, "_msdcs.$DomainName")) {
+    Get-DnsServerResourceRecord -ZoneName $zone -RRType A -ErrorAction SilentlyContinue |
+        Where-Object { $_.RecordData.IPv4Address -like "10.0.2.*" } |
+        ForEach-Object {
+            Remove-DnsServerResourceRecord -ZoneName $zone -InputObject $_ -Force
+            Write-Host "    Enregistrement supprime : $($_.HostName) ($zone)"
+        }
+}
+
+# ---------------------------------------------------------------------------
 # Installation des roles DFS sur DC02
 # ---------------------------------------------------------------------------
 Write-Host "==> Installation des roles DFS sur DC02"

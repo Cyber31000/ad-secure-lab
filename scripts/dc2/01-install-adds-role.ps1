@@ -19,6 +19,16 @@ if (-not $ip) {
 
 Write-Host "    Interface index $($ip.InterfaceIndex). Pointage DNS vers $Dc01Ip"
 Set-DnsClientServerAddress -InterfaceIndex $ip.InterfaceIndex -ServerAddresses $Dc01Ip
+
+# La carte NAT Vagrant (10.0.2.15, identique sur toutes les VM) ne doit pas
+# s'enregistrer dans le DNS : sinon DC01 se connecte a lui-meme en croyant
+# joindre DC02 et la replication echoue ("The target principal name is incorrect").
+Get-NetIPAddress -AddressFamily IPv4 |
+    Where-Object { $_.IPAddress -like "10.0.2.*" } |
+    ForEach-Object {
+        Set-DnsClient -InterfaceIndex $_.InterfaceIndex -RegisterThisConnectionsAddress $false
+        Write-Host "    Carte NAT (index $($_.InterfaceIndex)) exclue de l'enregistrement DNS."
+    }
 Start-Sleep -Seconds 5
 
 Write-Host "==> Verification du role AD DS"
