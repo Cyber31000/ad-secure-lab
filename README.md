@@ -36,12 +36,12 @@ Réseau host-only : `192.168.56.0/24`
 
 | Outil | Version conseillée | Rôle |
 |-------|--------------------|------|
-| VirtualBox | **7.0.x uniquement** (7.2 non compatible avec les box Windows récentes) | Hyperviseur |
+| VirtualBox | 7.2.12 (testé le 22/11/2026) ou 7.0.26 | Hyperviseur |
 | Vagrant | 2.4 ou supérieure | Orchestration |
 | Plugin vagrant-reload | dernière version | Gestion des redémarrages, installé automatiquement au premier `vagrant up` |
 | RAM disponible | 16 Go minimum, 20-32 Go recommandés | Trois VM tournent en parallèle (12 Go alloués) |
 
-Note importante sur VirtualBox : la branche 7.2 rejette l'OVF des box Windows récentes de gusztavvargadr avec l'erreur `Unknown resource type 32768`. Utiliser VirtualBox 7.0.x (dernier build 7.0.26 disponible sur https://www.virtualbox.org/wiki/Download_Old_Builds_7_0). Le Vagrantfile patche automatiquement l'OVF téléchargé pour retirer l'entree NVRAM incompatible, aucune action manuelle requise.
+Note sur VirtualBox : le déploiement complet (DC01, DC02, CLI01) a été validé avec VirtualBox 7.2.12. Le Vagrantfile patche automatiquement l'OVF des box gusztavvargadr (entrée NVRAM `Unknown resource type 32768`), et les scripts désactivent l'IPv6 que le NAT de VirtualBox 7.2 distribue aux VM. Ne pas mélanger les versions : l'Extension Pack doit avoir exactement la même version que VirtualBox, et un retour de la 7.2 vers la 7.0 peut casser le pilote réseau host-only (voir [dépannage](docs/troubleshooting.md)).
 
 Note sur les hôtes Windows 11 : si `Memory Integrity` (Sécurité Windows -> Sécurité de l'appareil -> Isolation du noyau) est activée, VirtualBox tourne en mode dégradé et les VM restent bloquées à l'écran noir. Désactiver Memory Integrity puis redémarrer avant `vagrant up`. Voir [dépannage](docs/troubleshooting.md).
 

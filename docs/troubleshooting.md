@@ -247,6 +247,36 @@ vagrant winrm dc02 -c 'Disable-NetAdapterBinding -Name "Ethernet" -ComponentID m
 vagrant reload dc02 --provision
 ```
 
+## `Could not find Host Interface Networking driver! Please reinstall`
+
+Symptôme : `vagrant up` échoue sur `hostonlyif create`. Des VM déjà créées perdent leur carte host-only ou ne démarrent plus (« interfaces réseau physiques introuvables »).
+
+Cause : pilote réseau VirtualBox absent ou cassé sur l'hôte, typiquement après un passage de la 7.2 à la 7.0 (ou l'inverse) sans désinstallation propre.
+
+Résolution : désinstaller VirtualBox, redémarrer, supprimer les adaptateurs « VirtualBox Host-Only Ethernet Adapter » restants dans le Gestionnaire de périphériques (afficher les périphériques cachés), réinstaller une seule version avec les composants Networking cochés, redémarrer. Les VM existantes ne sont pas supprimées par la désinstallation.
+
+## VM très lentes ou écran noir : icône tortue dans VirtualBox
+
+Symptôme : icône de tortue verte dans la barre d'état de la VM, `VBox.log` contient `HM: HMR3Init: Attempting fall back to NEM: VT-x is not available`.
+
+Cause : Hyper-V ou la sécurité basée sur la virtualisation (VBS) occupe VT-x sur l'hôte. `msinfo32` affiche « Sécurité basée sur la virtualisation : En cours d'exécution ».
+
+Résolution : désactiver l'Intégrité de la mémoire, `bcdedit /set hypervisorlaunchtype off`, décocher Hyper-V, Plateforme de machine virtuelle et Plateforme de l'hyperviseur Windows, redémarrer. Si VBS tourne encore alors que tout le registre est à 0, elle est verrouillée dans l'UEFI : suivre la procédure Microsoft « Disable Virtualization-based Security » (SecConfig.efi avec `DISABLE-LSA-ISO,DISABLE-VBS`).
+
+## CLI01 : timeout Vagrant après la jonction au domaine
+
+Symptôme : `Jonction reussie`, puis `Timed out while waiting for the machine to boot` au reload.
+
+Cause : le premier redémarrage après jonction (application des GPO du domaine) peut dépasser le délai de Vagrant. La VM finit de démarrer normalement.
+
+Vérification : la jonction était la dernière étape, rien n'est à rejouer si :
+
+```powershell
+vagrant winrm cli01 -c 'hostname; nltest /sc_query:lab.local'
+```
+
+renvoie `CLI01` et `NERR_Success`.
+
 ## Repartir de zero
 
 Pour tout supprimer et recommencer :
