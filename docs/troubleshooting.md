@@ -233,6 +233,20 @@ Restart-Service DNS
 
 Puis supprimer les enregistrements A en 10.0.2.15 dans les zones `lab.local` et `_msdcs.lab.local`, et relancer `ipconfig /registerdns`.
 
+## La promotion de DC02 échoue : "helper DC DC01.lab.local couldn't be contacted"
+
+Symptôme : `Install-ADDSDomainController` échoue avec `The specified server cannot perform the requested operation` (erreur 58). `C:\Windows\debug\dcpromo.log` sur DC02 contient `Failed to ldap connect to server DC01.lab.local with error 81`, alors que DC01 répond bien sur 192.168.56.10 port 389.
+
+Cause probable : VirtualBox 7.2 distribue de l'IPv6 sur la carte NAT, avec le même préfixe `fd17:625c:f037:2::/64` sur toutes les VM. DC01 s'annonce alors avec son adresse IPv6 NAT (`nltest /dsgetdc:lab.local` l'affiche), injoignable depuis DC02.
+
+Résolution : les scripts de provisioning désactivent désormais l'IPv6 sur la carte NAT. Sur des VM déjà déployées :
+
+```powershell
+vagrant winrm dc01 -c 'Disable-NetAdapterBinding -Name "Ethernet" -ComponentID ms_tcpip6; ipconfig /registerdns'
+vagrant winrm dc02 -c 'Disable-NetAdapterBinding -Name "Ethernet" -ComponentID ms_tcpip6; ipconfig /flushdns'
+vagrant reload dc02 --provision
+```
+
 ## Repartir de zero
 
 Pour tout supprimer et recommencer :

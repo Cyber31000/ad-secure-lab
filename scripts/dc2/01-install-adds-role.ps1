@@ -27,6 +27,11 @@ Get-NetIPAddress -AddressFamily IPv4 |
     Where-Object { $_.IPAddress -like "10.0.2.*" } |
     ForEach-Object {
         Set-DnsClient -InterfaceIndex $_.InterfaceIndex -RegisterThisConnectionsAddress $false
+        # IPv6 coupe sur la carte NAT : VirtualBox 7.2 y distribue un prefixe
+        # fd17:625c:f037:2::/64 identique sur toutes les VM, qui fait echouer la
+        # promotion d'un DC additionnel (ldap connect error 81).
+        $natName = (Get-NetAdapter -InterfaceIndex $_.InterfaceIndex).Name
+        Disable-NetAdapterBinding -Name $natName -ComponentID ms_tcpip6 -ErrorAction SilentlyContinue
         Write-Host "    Carte NAT (index $($_.InterfaceIndex)) exclue de l'enregistrement DNS."
     }
 Start-Sleep -Seconds 5
