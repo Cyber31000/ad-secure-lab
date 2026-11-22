@@ -19,6 +19,25 @@ $DomainDN  = (Get-ADDomain).DistinguishedName   # ex : DC=lab,DC=local
 $RootOuName = "LAB"
 
 # ---------------------------------------------------------------------------
+# Serveur DNS limite a l'interface du lab, nettoyage de l'adresse NAT
+# ---------------------------------------------------------------------------
+# Le service DNS ne doit repondre que sur 192.168.56.10. Les enregistrements
+# en 10.0.2.x crees avant l'exclusion de la carte NAT sont supprimes.
+Write-Host "==> Limitation du serveur DNS a l'interface du lab"
+dnscmd /ResetListenAddresses 192.168.56.10 | Out-Null
+Restart-Service DNS
+
+$ZoneName = (Get-ADDomain).DNSRoot
+foreach ($zone in @($ZoneName, "_msdcs.$ZoneName")) {
+    Get-DnsServerResourceRecord -ZoneName $zone -RRType A -ErrorAction SilentlyContinue |
+        Where-Object { $_.RecordData.IPv4Address -like "10.0.2.*" } |
+        ForEach-Object {
+            Remove-DnsServerResourceRecord -ZoneName $zone -InputObject $_ -Force
+            Write-Host "    Enregistrement supprime : $($_.HostName) ($zone)"
+        }
+}
+
+# ---------------------------------------------------------------------------
 # Forwarder DNS vers un resolveur public pour la resolution externe
 # ---------------------------------------------------------------------------
 Write-Host "==> Configuration du forwarder DNS"
