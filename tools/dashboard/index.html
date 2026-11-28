@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tableau de bord · lab.local</title>
+<meta name="csrf-token" content="__CSRF_TOKEN__">
+<meta name="dashboard-mode" content="__MODE__">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Tableau de bord du lab, servi par Start-Dashboard.ps1. Design issu de unslop par Damir Sokolovsky (@heydamir), CC BY 4.0 -->
+<style>
+  :root {
+    --deep: #0f0f10; --bg: #141415; --card: #19191b; --raised: #232325;
+    --line: rgba(237,237,237,.08); --line-strong: rgba(237,237,237,.14);
+    --text: #ededed; --text-2: #a1a1a6; --text-3: #85858b;
+    --accent: #f2a33a; --accent-ink: #1a1206;
+    --pos: #4cc38a; --neg: #e5484d; --warn: #f2a33a;
+    --ease: cubic-bezier(.22,1,.36,1);
+    --sans: Geist, "Segoe UI", system-ui, sans-serif;
+    --mono: "Geist Mono", ui-monospace, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); font-size: 14px; line-height: 20px; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; -webkit-font-smoothing: antialiased; }
+  button, input { font: inherit; color: inherit; }
+  svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .num { font-variant-numeric: tabular-nums; }
+  .mono { font-family: var(--mono); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Sidebar */
+  aside { width: 256px; flex: none; background: var(--deep); border-right: 1px solid var(--line); padding: 20px 12px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; height: 32px; color: var(--text); text-decoration: none; }
+  .brand-mark { width: 24px; height: 24px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; }
+  .brand-mark svg.i { width: 14px; height: 14px; stroke-width: 2; }
+  .brand-name { font-size: 16px; font-weight: 500; }
+  .section-label { font-size: 12px; line-height: 16px; color: var(--text-3); padding: 0 8px; margin: 24px 0 8px; }
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav a { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 8px; border-radius: 8px; color: var(--text-2); text-decoration: none; white-space: nowrap; transition: background-color 150ms var(--ease), color 150ms var(--ease); }
+  .nav a svg.i { color: var(--text-3); }
+  .nav a:hover { background: var(--card); color: var(--text); }
+  .nav a.active { background: var(--raised); color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+  .nav a.active svg.i, .nav a:hover svg.i { color: var(--text-2); }
+  .nav .count { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+  .domain { margin-top: auto; padding: 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+  .domain-title { font-family: var(--mono); font-size: 12px; color: var(--text-3); margin-bottom: 8px; }
+  .domain-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+  .domain-row + .domain-row { margin-top: 4px; }
+  .domain-row .mono { margin-left: auto; font-size: 12px; color: var(--text-3); }
+  .led { width: 6px; height: 6px; border-radius: 50%; background: var(--pos); flex: none; }
+  .led.warn { background: var(--warn); }
+  .led.bad { background: var(--neg); }
+  .led.off { background: var(--text-3); }
+
+  /* Main */
+  main { flex: 1; min-width: 0; padding: 24px 32px 48px; }
+  .wrap { max-width: 1440px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 16px; min-height: 56px; margin-bottom: 24px; }
+  h1 { font-size: 28px; line-height: 32px; font-weight: 500; letter-spacing: -.01em; }
+  .period { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+  .search { margin-left: auto; display: flex; align-items: center; gap: 8px; width: 280px; height: 36px; padding: 0 8px 0 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); color: var(--text-3); transition: border-color 150ms var(--ease); }
+  .search:hover, .search:focus-within { border-color: var(--line-strong); }
+  .search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--text); }
+  .search input::placeholder { color: var(--text-3); }
+  kbd { font-family: var(--mono); font-size: 11px; line-height: 16px; color: var(--text-3); padding: 1px 6px; border-radius: 4px; background: var(--raised); border: 1px solid var(--line); }
+
+  .view { display: none; }
+  .view.on { display: block; animation: rise 300ms var(--ease) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+  @media (prefers-reduced-motion: reduce) { .view.on { animation: none; } }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+  .stat { padding: 20px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); color: inherit; text-decoration: none; transition: border-color 150ms var(--ease); }
+  a.stat:hover { border-color: var(--line-strong); }
+  .stat .k { font-size: 13px; color: var(--text-2); }
+  .stat .v { font-size: 32px; line-height: 1; font-weight: 500; margin: 12px 0 8px; font-variant-numeric: tabular-nums; }
+  .stat .v small { font-size: 16px; color: var(--text-2); font-weight: 400; margin-left: 2px; }
+  .stat .d { font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .up { color: var(--pos); } .down { color: var(--neg); }
+
+  .row { display: grid; grid-template-columns: minmax(0,2fr) minmax(320px,1fr); gap: 12px; align-items: start; }
+  .panel { border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+  .panel-head { display: flex; align-items: center; gap: 12px; padding: 20px 20px 0; min-height: 40px; }
+  .panel-head h2 { font-size: 15px; font-weight: 500; }
+  .panel-head .meta { margin-left: auto; font-size: 12px; color: var(--text-3); font-family: var(--mono); }
+  .panel-body { padding: 16px 20px 20px; }
+
+  .chart-summary { display: flex; gap: 32px; padding: 16px 20px 0; }
+  .chart-summary div { font-size: 13px; color: var(--text-2); }
+  .chart-summary strong { display: block; font-size: 20px; line-height: 28px; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
+  .chart-summary .today strong { color: var(--accent); }
+  .chart { padding: 8px 20px 16px; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart .grid line { stroke: var(--line); }
+  .chart text { font-family: var(--mono); font-size: 11px; fill: var(--text-3); }
+  .chart .bar { fill: #2e2e31; transition: fill 150ms var(--ease); }
+  .chart .bar:hover { fill: #3a3a3e; }
+  .chart .bar.today { fill: var(--accent); }
+  .chart .today-label { fill: var(--accent); }
+
+  .log { list-style: none; padding: 8px; }
+  .log li { display: grid; grid-template-columns: 6px 1fr auto; column-gap: 12px; row-gap: 2px; align-items: center; padding: 12px; border-radius: 8px; transition: background-color 150ms var(--ease); }
+  .log li:hover { background: var(--raised); }
+  .log li + li { box-shadow: 0 -1px 0 var(--line); }
+  .log li:hover, .log li:hover + li { box-shadow: none; }
+  .sev { width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); }
+  .sev.high { background: var(--neg); } .sev.mid { background: var(--warn); }
+  .log .what { font-size: 14px; }
+  .who { font-family: var(--mono); font-size: 13px; color: var(--text-2); }
+  .log .when { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .log .src { grid-column: 2 / 4; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-3); }
+  .evt { font-family: var(--mono); font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 4px; background: var(--raised); border: 1px solid var(--line); color: var(--text-2); }
+  .link { background: none; border: 0; cursor: pointer; font-size: 13px; color: var(--text-2); text-decoration: none; transition: color 150ms var(--ease); }
+  .link:hover { color: var(--text); }
+  .log-foot { padding: 4px 20px 20px; }
+
+  /* Filtres */
+  .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .chip { height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text-2); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background-color 150ms var(--ease), color 150ms var(--ease), border-color 150ms var(--ease); }
+  .chip:hover { color: var(--text); border-color: var(--line-strong); }
+  .chip[aria-pressed="true"] { background: var(--raised); color: var(--text); border-color: var(--line-strong); }
+  .chip .mono { font-size: 12px; color: var(--text-3); }
+  .toolbar .hint { margin-left: auto; font-size: 13px; color: var(--text-3); }
+
+  /* Tables */
+  .table { width: 100%; border-collapse: collapse; }
+  .table th { text-align: left; font-weight: 400; font-size: 12px; color: var(--text-3); padding: 12px 16px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .table td { padding: 0 16px; height: 44px; border-bottom: 1px solid var(--line); color: var(--text-2); white-space: nowrap; }
+  .table tr:last-child td { border-bottom: 0; }
+  .table td.main { color: var(--text); }
+  .table .r { text-align: right; }
+  .table tbody tr { cursor: pointer; transition: background-color 150ms var(--ease); }
+  .table tbody tr:hover { background: rgba(237,237,237,.03); }
+  .table tbody tr.sel { background: var(--raised); }
+  .table tbody tr.sel td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+  .table.static tbody tr { cursor: default; }
+  .state { display: inline-flex; align-items: center; gap: 8px; }
+  .empty { padding: 32px 16px; text-align: center; color: var(--text-3); }
+  .scroll { overflow-x: auto; }
+
+  /* Fiches */
+  .scroll { scrollbar-color: var(--raised) transparent; }
+  @media (max-width: 1500px) { .table .opt { display: none; } }
+  .split { display: grid; grid-template-columns: minmax(0,1fr) 352px; gap: 12px; align-items: start; }
+  .detail { padding: 20px; position: sticky; top: 24px; }
+  .avatar { width: 40px; height: 40px; border-radius: 8px; background: var(--raised); border: 1px solid var(--line); display: grid; place-items: center; font-weight: 500; color: var(--text-2); margin-bottom: 12px; }
+  .detail h3 { font-size: 18px; line-height: 24px; font-weight: 500; }
+  .detail .role { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+  dl.props { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin-top: 20px; font-size: 13px; }
+  dl.props dt { color: var(--text-3); }
+  dl.props dd { color: var(--text); text-align: right; min-width: 0; overflow-wrap: anywhere; }
+  .actions { display: flex; gap: 8px; margin-top: 20px; }
+  .btn { white-space: nowrap; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--raised); color: var(--text); cursor: pointer; transition: background-color 150ms var(--ease), border-color 150ms var(--ease); }
+  .btn:hover { border-color: var(--line-strong); }
+  .btn:active { transform: scale(.98); }
+  .btn.primary { background: var(--text); color: var(--bg); border-color: transparent; }
+  .btn:disabled { opacity: .4; cursor: default; }
+
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+  .server-head { display: flex; align-items: center; gap: 12px; padding: 20px 20px 0; }
+  .server-head h2 { font-size: 18px; font-weight: 500; }
+  .server-head .state { margin-left: auto; font-size: 13px; color: var(--text-2); }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag { font-size: 12px; line-height: 20px; padding: 0 8px; border-radius: 4px; background: var(--raised); border: 1px solid var(--line); color: var(--text-2); }
+  .policy { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+
+  .reports { list-style: none; padding: 8px; }
+  .reports li { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; }
+  .reports li + li { box-shadow: 0 -1px 0 var(--line); }
+  .reports .t { color: var(--text); }
+  .reports .s { font-size: 13px; color: var(--text-3); }
+  .reports .btn { margin-left: auto; }
+
+  .settings { max-width: 720px; }
+  .setting { display: flex; align-items: center; gap: 16px; padding: 16px 20px; }
+  .setting + .setting { border-top: 1px solid var(--line); }
+  .setting .t { color: var(--text); }
+  .setting .s { font-size: 13px; color: var(--text-3); }
+  .setting > :last-child { margin-left: auto; }
+  .toggle { width: 36px; height: 20px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--raised); position: relative; cursor: pointer; flex: none; transition: background-color 150ms var(--ease); }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 7px; background: var(--text-3); transition: transform 180ms var(--ease), background-color 150ms var(--ease); }
+  .toggle[aria-checked="true"] { background: var(--accent); border-color: transparent; }
+  .toggle[aria-checked="true"]::after { transform: translateX(16px); background: var(--accent-ink); }
+  .stepper { display: flex; align-items: center; gap: 4px; }
+  .stepper .btn { width: 32px; padding: 0; }
+  .stepper output { width: 40px; text-align: center; font-family: var(--mono); }
+
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); opacity: 0; pointer-events: none; padding: 10px 16px; border-radius: 8px; background: var(--raised); border: 1px solid var(--line-strong); font-size: 13px; color: var(--text); transition: opacity 200ms var(--ease), transform 200ms var(--ease); z-index: 10; }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 1100px) {
+    .stats, .policy { grid-template-columns: repeat(2, 1fr); }
+    .row, .split, .cards { grid-template-columns: 1fr; }
+    .detail { position: static; }
+  }
+  @media (max-width: 760px) {
+    body { display: block; }
+    aside { position: static; width: auto; height: auto; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
+    aside .section-label, aside .domain { display: none; }
+    .navs { display: flex; gap: 2px; overflow-x: auto; margin-top: 12px; }
+    .nav { flex-direction: row; }
+    main { padding: 16px 16px 40px; }
+    header { flex-wrap: wrap; }
+    .search { width: 100%; margin-left: 0; }
+    .chart-summary { gap: 20px; }
+    .toolbar .hint { width: 100%; margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-dash" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/><path d="M20 21a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.9a1 1 0 0 1-.88-.55l-.42-.85a1 1 0 0 0-.92-.6H13a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/><path d="M3 5a2 2 0 0 0 2 2h3"/><path d="M3 3v13a2 2 0 0 0 2 2h3"/></symbol>
+  <symbol id="i-policy" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+</svg>
+
+<aside>
+  <a class="brand" href="#/tableau-de-bord">
+    <span class="brand-mark"><svg class="i"><use href="#i-shield"/></svg></span>
+    <span class="brand-name">ADSecure AI</span>
+  </a>
+  <div class="navs">
+    <div class="section-label">Annuaire</div>
+    <nav class="nav">
+      <a href="#/tableau-de-bord" data-view="tableau-de-bord"><svg class="i"><use href="#i-dash"/></svg>Tableau de bord</a>
+      <a href="#/utilisateurs" data-view="utilisateurs"><svg class="i"><use href="#i-users"/></svg>Utilisateurs<span class="count num" id="nav-users"></span></a>
+      <a href="#/controleurs" data-view="controleurs"><svg class="i"><use href="#i-server"/></svg>Contrôleurs<span class="count num" id="nav-dcs"></span></a>
+      <a href="#/partages" data-view="partages"><svg class="i"><use href="#i-folder"/></svg>Partages DFS</a>
+      <a href="#/gpo" data-view="gpo"><svg class="i"><use href="#i-policy"/></svg>GPO<span class="count num" id="nav-gpo"></span></a>
+    </nav>
+    <div class="section-label">Sécurité</div>
+    <nav class="nav">
+      <a href="#/alertes" data-view="alertes"><svg class="i"><use href="#i-bell"/></svg>Alertes<span class="count num" id="nav-alerts"></span></a>
+      <a href="#/rapports" data-view="rapports"><svg class="i"><use href="#i-chart"/></svg>Rapports</a>
+      <a href="#/parametres" data-view="parametres"><svg class="i"><use href="#i-settings"/></svg>Paramètres</a>
+    </nav>
+  </div>
+  <div class="domain">
+    <div class="domain-title">lab.local</div>
+    <div id="domain-rows"><div class="domain-row"><span class="led off"></span>Connexion<span class="mono">…</span></div></div>
+  </div>
+</aside>
+
+<main>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1 id="title">Tableau de bord</h1>
+        <p class="period" id="subtitle">Semaine du 22 au 28 novembre 2026</p>
+      </div>
+      <label class="search">
+        <svg class="i"><use href="#i-search"/></svg>
+        <input id="q" placeholder="Rechercher un compte" aria-label="Rechercher un compte" autocomplete="off">
+        <kbd>Ctrl K</kbd>
+      </label>
+    </header>
+
+    <!-- Tableau de bord -->
+    <section class="view" data-view="tableau-de-bord">
+      <div class="stats">
+        <a class="stat" href="#/utilisateurs">
+          <div class="k">Comptes utilisateurs</div>
+          <div class="v" id="stat-users">–</div>
+          <div class="d" id="stat-users-d">&nbsp;</div>
+        </a>
+        <a class="stat" href="#/utilisateurs?etat=verrouille">
+          <div class="k">Comptes verrouillés</div>
+          <div class="v" id="stat-locked">–</div>
+          <div class="d" id="stat-locked-d">&nbsp;</div>
+        </a>
+        <a class="stat" href="#/gpo">
+          <div class="k">GPO de durcissement</div>
+          <div class="v" id="stat-gpo">–</div>
+          <div class="d">liées à lab.local</div>
+        </a>
+        <a class="stat" href="#/controleurs">
+          <div class="k">Réplication en échec</div>
+          <div class="v" id="stat-repl">–</div>
+          <div class="d" id="stat-repl-d">&nbsp;</div>
+        </a>
+      </div>
+      <div class="row">
+        <div class="panel">
+          <div class="panel-head"><h2>Connexions de la semaine</h2><span class="meta">démo, non relié au lab</span></div>
+          <div class="chart-summary">
+            <div><strong>238</strong>sur 7 jours</div>
+            <div><strong>34</strong>moyenne par jour</div>
+            <div class="today"><strong>9</strong>aujourd'hui, samedi</div>
+          </div>
+          <div class="chart">
+            <svg viewBox="0 0 700 304" role="img" aria-label="Connexions par jour : dimanche 6, lundi 41, mardi 47, mercredi 39, jeudi 52, vendredi 44, samedi 9">
+              <g class="grid">
+                <line x1="36" x2="700" y1="20" y2="20"/><line x1="36" x2="700" y1="85" y2="85"/><line x1="36" x2="700" y1="150" y2="150"/><line x1="36" x2="700" y1="215" y2="215"/><line x1="36" x2="700" y1="280" y2="280"/>
+              </g>
+              <text x="8" y="24">60</text><text x="8" y="89">45</text><text x="8" y="154">30</text><text x="8" y="219">15</text><text x="14" y="284">0</text>
+              <!-- échelle : 60 = 260 px, base y = 280 -->
+              <rect class="bar" x="56"  y="254"    width="64" height="26"     rx="4"><title>dimanche : 6</title></rect>
+              <rect class="bar" x="149" y="102.33" width="64" height="177.67" rx="4"><title>lundi : 41</title></rect>
+              <rect class="bar" x="242" y="76.33"  width="64" height="203.67" rx="4"><title>mardi : 47</title></rect>
+              <rect class="bar" x="335" y="111"    width="64" height="169"    rx="4"><title>mercredi : 39</title></rect>
+              <rect class="bar" x="428" y="54.67"  width="64" height="225.33" rx="4"><title>jeudi : 52</title></rect>
+              <rect class="bar" x="521" y="89.33"  width="64" height="190.67" rx="4"><title>vendredi : 44</title></rect>
+              <rect class="bar today" x="614" y="241" width="64" height="39"  rx="4"><title>samedi : 9</title></rect>
+              <g text-anchor="middle">
+                <text x="88" y="300">dim</text><text x="181" y="300">lun</text><text x="274" y="300">mar</text><text x="367" y="300">mer</text><text x="460" y="300">jeu</text><text x="553" y="300">ven</text><text x="646" y="300" class="today-label">sam</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Journal des alertes</h2><span class="meta num" id="log-meta"></span></div>
+          <ul class="log" id="log-short"></ul>
+          <div class="log-foot"><a class="link" href="#/alertes" id="log-all">Voir les alertes</a></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Utilisateurs -->
+    <section class="view" data-view="utilisateurs">
+      <div class="toolbar" id="user-filters">
+        <button class="chip" data-etat="tous" aria-pressed="true">Tous <span class="mono">8</span></button>
+        <button class="chip" data-etat="actif" aria-pressed="false">Actifs <span class="mono">7</span></button>
+        <button class="chip" data-etat="verrouille" aria-pressed="false">Verrouillés <span class="mono">1</span></button>
+        <span class="hint" id="user-hint"></span>
+      </div>
+      <div class="split">
+        <div class="panel scroll">
+          <table class="table">
+            <thead><tr><th>Nom</th><th>Identifiant</th><th>Service</th><th class="opt">Fonction</th><th>Dernière connexion</th><th>État</th></tr></thead>
+            <tbody id="users"></tbody>
+          </table>
+        </div>
+        <div class="panel detail" id="user-detail"></div>
+      </div>
+    </section>
+
+    <!-- Contrôleurs -->
+    <section class="view" data-view="controleurs">
+      <div class="cards" id="dcs"></div>
+      <div class="panel" style="margin-top:12px">
+        <div class="panel-head"><h2>Réplication Active Directory</h2><span class="meta">Get-ADReplicationPartnerMetadata</span></div>
+        <div class="scroll" style="padding:8px 4px 4px">
+          <table class="table static">
+            <thead><tr><th>Source</th><th>Destination</th><th>Partition</th><th>Dernière réussite</th><th class="r">Échecs</th><th>État</th></tr></thead>
+            <tbody id="repl"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Partages DFS -->
+    <section class="view" data-view="partages">
+      <div class="panel">
+        <div class="panel-head"><h2>Espace de noms</h2><span class="meta">\\lab.local\Public · démo</span></div>
+        <div class="scroll" style="padding:8px 4px 4px">
+          <table class="table static">
+            <thead><tr><th>Dossier</th><th>Cibles</th><th>Type</th><th>État</th></tr></thead>
+            <tbody>
+              <tr><td class="main mono">\\lab.local\Public\SharedData</td><td class="mono">\\DC01\SharedData, \\DC02\SharedData</td><td>Domaine</td><td><span class="state"><span class="led"></span>2 cibles en ligne</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <div class="panel-head"><h2>Réplication DFS-R</h2><span class="meta">C:\SharedData · démo</span></div>
+        <div class="scroll" style="padding:8px 4px 4px">
+          <table class="table static">
+            <thead><tr><th>Dossier répliqué</th><th>Connexion</th><th class="r">Fichiers en attente</th><th>Dernière synchro</th><th>État</th></tr></thead>
+            <tbody>
+              <tr><td class="main">SharedData</td><td>DC01 → DC02</td><td class="r num">0</td><td class="num">il y a 3 h</td><td><span class="state"><span class="led"></span>Synchronisé</span></td></tr>
+              <tr><td class="main">SharedData</td><td>DC02 → DC01</td><td class="r num">0</td><td class="num">il y a 3 h</td><td><span class="state"><span class="led"></span>Synchronisé</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- GPO -->
+    <section class="view" data-view="gpo">
+      <div class="policy">
+        <div class="stat"><div class="k">Longueur minimale</div><div class="v" id="pol-len">–</div><div class="d" id="pol-len-d">caractères</div></div>
+        <div class="stat"><div class="k">Âge maximal</div><div class="v"><span id="pol-age">–</span><small>j</small></div><div class="d">avant changement obligatoire</div></div>
+        <div class="stat"><div class="k">Seuil de verrouillage</div><div class="v" id="pol-thr">–</div><div class="d">échecs de connexion</div></div>
+        <div class="stat"><div class="k">Durée de verrouillage</div><div class="v"><span id="pol-dur">–</span><small>min</small></div><div class="d">puis déverrouillage auto</div></div>
+      </div>
+      <div class="panel scroll">
+        <table class="table static">
+          <thead><tr><th>Nom</th><th>Liée à</th><th>Paramètre</th><th>État</th><th>Modifiée</th></tr></thead>
+          <tbody id="gpos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Alertes -->
+    <section class="view" data-view="alertes">
+      <div class="toolbar" id="alert-filters">
+        <button class="chip" data-sev="toutes" aria-pressed="true">Toutes <span class="mono">7</span></button>
+        <button class="chip" data-sev="high" aria-pressed="false">Critiques <span class="mono">2</span></button>
+        <button class="chip" data-sev="mid" aria-pressed="false">À surveiller <span class="mono">3</span></button>
+        <button class="chip" data-sev="low" aria-pressed="false">Info <span class="mono">2</span></button>
+      </div>
+      <div class="panel"><ul class="log" id="log-full"></ul></div>
+    </section>
+
+    <!-- Rapports -->
+    <section class="view" data-view="rapports">
+      <div class="panel">
+        <ul class="reports">
+          <li><div><div class="t">Synthèse de sécurité, semaine 48</div><div class="s">Échecs de connexion, verrouillages, modifications de groupes</div></div><button class="btn" data-toast>Générer</button></li>
+          <li><div><div class="t">Comptes inactifs depuis 30 jours</div><div class="s">LAB/Users et LAB/ServiceAccounts</div></div><button class="btn" data-toast>Générer</button></li>
+          <li><div><div class="t">État de la réplication</div><div class="s">AD DS et DFS-R entre DC01 et DC02</div></div><button class="btn" data-toast>Générer</button></li>
+          <li><div><div class="t">Conformité des GPO</div><div class="s">Les 5 GPO de durcissement et leurs liaisons</div></div><button class="btn" data-toast>Générer</button></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Paramètres -->
+    <section class="view" data-view="parametres">
+      <div class="settings">
+        <div class="panel">
+          <div class="setting"><div><div class="t">Domaine</div><div class="s">Contrôleur principal DC01, 192.168.56.10</div></div><span class="mono" style="color:var(--text-2)">lab.local</span></div>
+          <div class="setting"><div><div class="t">Seuil d'alerte</div><div class="s">Échecs de connexion avant alerte critique</div></div>
+            <div class="stepper"><button class="btn" data-step="-1" aria-label="Diminuer">−</button><output id="seuil">5</output><button class="btn" data-step="1" aria-label="Augmenter">+</button></div></div>
+        </div>
+        <div class="panel" style="margin-top:12px">
+          <div class="panel-head" style="padding-bottom:4px"><h2>Notifications</h2></div>
+          <div class="setting"><div><div class="t">Verrouillages de compte</div><div class="s">Événement 4740</div></div><button class="toggle" role="switch" aria-checked="true" aria-label="Verrouillages de compte"></button></div>
+          <div class="setting"><div><div class="t">Réplication lente ou en échec</div><div class="s">Latence au-delà de 30 s</div></div><button class="toggle" role="switch" aria-checked="true" aria-label="Réplication"></button></div>
+          <div class="setting"><div><div class="t">Modifications de GPO</div><div class="s">Événement 5136</div></div><button class="toggle" role="switch" aria-checked="false" aria-label="Modifications de GPO"></button></div>
+          <div class="setting"><div><div class="t">Ajouts aux groupes de sécurité</div><div class="s">Événement 4728</div></div><button class="toggle" role="switch" aria-checked="true" aria-label="Ajouts aux groupes"></button></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+  // Données lues sur DC01 par Start-Dashboard.ps1. Le graphique et la vue DFS restent des démos.
+  const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+  const MODE = document.querySelector('meta[name="dashboard-mode"]').content;
+
+  let users = [], alerts = [], gpos = [], dcs = [], policy = null;
+  const errors = {};
+
+  // Descriptions affichées quand la GPO n'a pas de commentaire dans l'AD
+  const gpoDesc = {
+    "SEC - Desactivation LLMNR": "Bloque la résolution de noms multicast",
+    "SEC - Desactivation SMBv1": "Retire le protocole SMB version 1",
+    "SEC - Signature LDAP requise": "Refuse les liaisons LDAP non signées",
+    "SEC - Restriction enumeration anonyme": "Interdit l'énumération SAM anonyme",
+    "SEC - Durcissement ouverture de session": "Masque le dernier utilisateur, bannière légale",
+    "Default Domain Policy": "Stratégie par défaut du domaine",
+    "Default Domain Controllers Policy": "Stratégie par défaut des contrôleurs",
+  };
+
+  const views = {
+    "tableau-de-bord": ["Tableau de bord", () => MODE === "demo" ? "lab.local, données de démo" : "lab.local, relié à DC01"],
+    "utilisateurs": ["Utilisateurs", () => users.length ? `${users.length} comptes dans LAB/Users` : "LAB/Users"],
+    "controleurs": ["Contrôleurs", () => `Domaine lab.local, ${dcs.length || "–"} contrôleurs`],
+    "partages": ["Partages DFS", () => "Espace de noms de domaine, données de démo"],
+    "gpo": ["GPO", () => `Stratégie de mots de passe et ${gpos.length || "–"} GPO`],
+    "alertes": ["Alertes", () => "Journal Security de DC01, 7 derniers jours"],
+    "rapports": ["Rapports", () => "Exports à partir des journaux et de l'annuaire"],
+    "parametres": ["Paramètres", () => "Supervision de lab.local"],
+  };
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  // Dates
+  const fmtHm = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const fmtDay = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  const fmtDate = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  function rel(iso) {
+    if (!iso) return "jamais";
+    const d = new Date(iso), s = (Date.now() - d) / 1000;
+    if (s < 60) return "à l'instant";
+    if (s < 3600) return `il y a ${Math.floor(s / 60)} min`;
+    if (s < 6 * 3600) return `il y a ${Math.floor(s / 3600)} h`;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    if (d >= today) return `aujourd'hui, ${fmtHm.format(d)}`;
+    if (d >= today - 864e5) return `hier, ${fmtHm.format(d)}`;
+    return fmtDay.format(d);
+  }
+  const ouPath = (dn) => (dn || "").split(",").filter((p) => p.startsWith("OU=")).map((p) => p.slice(3)).reverse().join("/");
+
+  async function api(path, body) {
+    const opts = body ? {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": CSRF },
+      body: JSON.stringify(body),
+    } : {};
+    const r = await fetch(path, opts);
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    return data;
+  }
+
+  // Utilisateurs
+  const etatLabel = { actif: ["", "Actif"], verrouille: ["bad", "Verrouillé"], desactive: ["off", "Désactivé"] };
+  let filtre = "tous", selection = null;
+  const toUser = (u) => ({
+    prenom: u.givenName || "", nom: u.surname || u.sam, sam: u.sam,
+    service: u.department || "–", fonction: u.title || "–", ou: ouPath(u.ou),
+    lastLogon: u.lastLogon, lockoutTime: u.lockoutTime, bad: u.badLogons,
+    etat: u.lockedOut ? "verrouille" : u.enabled ? "actif" : "desactive",
+  });
+
+  function renderUsers() {
+    const q = $("#q").value.trim().toLowerCase();
+    const list = users.filter((u) =>
+      (filtre === "tous" || u.etat === filtre) &&
+      (!q || `${u.prenom} ${u.nom} ${u.sam} ${u.service} ${u.fonction}`.toLowerCase().includes(q)));
+    let empty = `Aucun compte ne correspond à « ${esc(q)} »`;
+    if (errors.users) empty = `Comptes indisponibles : ${esc(errors.users)}`;
+    else if (!users.length) empty = "Chargement des comptes…";
+    $("#users").innerHTML = list.length ? list.map((u) => {
+      const [led, label] = etatLabel[u.etat];
+      return `<tr data-sam="${esc(u.sam)}" class="${u.sam === selection ? "sel" : ""}" tabindex="0">
+        <td class="main">${esc(u.prenom)} ${esc(u.nom)}</td><td class="mono">${esc(u.sam)}</td><td>${esc(u.service)}</td>
+        <td class="opt">${esc(u.fonction)}</td><td class="num">${rel(u.lastLogon)}</td>
+        <td><span class="state"><span class="led ${led}"></span>${label}</span></td></tr>`;
+    }).join("") : `<tr><td colspan="6" class="empty">${empty}</td></tr>`;
+    $$("#user-filters .chip").forEach((c) => {
+      const n = c.dataset.etat === "tous" ? users.length : users.filter((u) => u.etat === c.dataset.etat).length;
+      $(".mono", c).textContent = n;
+    });
+    $("#user-hint").textContent = q ? `${list.length} sur ${users.length} pour « ${$("#q").value.trim()} »` : "";
+    if (list.length && !list.some((u) => u.sam === selection)) selection = list[0].sam;
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const u = users.find((x) => x.sam === selection);
+    if (!u) { $("#user-detail").innerHTML = `<div class="role">Aucun compte sélectionné</div>`; return; }
+    const [led, label] = etatLabel[u.etat];
+    const locked = u.etat === "verrouille";
+    let lockRows = "";
+    if (locked) {
+      lockRows = `<dt>Verrouillé</dt><dd>${rel(u.lockoutTime)}</dd>`;
+      if (policy && u.lockoutTime && policy.lockoutMinutes > 0) {
+        const left = Math.ceil((new Date(u.lockoutTime).getTime() + policy.lockoutMinutes * 6e4 - Date.now()) / 6e4);
+        lockRows += `<dt>Fin auto</dt><dd>${left > 0 ? `dans ${left} min` : "imminente"}</dd>`;
+      }
+    }
+    $("#user-detail").innerHTML = `
+      <div class="avatar">${esc((u.prenom[0] || "") + (u.nom[0] || ""))}</div>
+      <h3>${esc(u.prenom)} ${esc(u.nom)}</h3>
+      <div class="role">${esc(u.fonction)}</div>
+      <dl class="props">
+        <dt>Identifiant</dt><dd class="mono">${esc(u.sam)}</dd>
+        <dt>UPN</dt><dd class="mono">${esc(u.sam)}@lab.local</dd>
+        <dt>OU</dt><dd class="mono">${esc(u.ou)}</dd>
+        <dt>Dernière connexion</dt><dd title="lastLogonTimestamp, peut avoir jusqu'à 14 jours de retard">${rel(u.lastLogon)}</dd>
+        <dt>Échecs récents</dt><dd class="num">${u.bad ?? "–"}</dd>
+        <dt>État</dt><dd><span class="state"><span class="led ${led}"></span>${label}</span></dd>
+        ${lockRows}
+      </dl>
+      <div class="actions">
+        <button class="btn ${locked ? "primary" : ""}" id="unlock" ${locked ? "" : "disabled"}>Déverrouiller</button>
+        <button class="btn" data-toast>Nouveau mot de passe</button>
+      </div>`;
+  }
+
+  async function unlock(btn) {
+    const u = users.find((x) => x.sam === selection);
+    if (!u || u.etat !== "verrouille") return;
+    btn.disabled = true;
+    btn.textContent = "Déverrouillage…";
+    try {
+      const r = await api("/api/unlock", { sam: u.sam });
+      if (r.lockedOut) throw new Error("le compte est toujours verrouillé");
+      toast(`${u.sam} déverrouillé dans lab.local`);
+      await Promise.all([load("users"), load("alerts")]);
+    } catch (e) {
+      toast(`Échec du déverrouillage : ${e.message}`);
+      renderDetail();
+    }
+  }
+
+  // Alertes
+  const plain = (ip) => (ip || "").replace(/^::ffff:/, "");
+  function toAlert(e) {
+    const base = { evt: String(e.id), when: rel(e.time), time: e.time, src: `Security · ${e.dc}`, who: e.target };
+    switch (e.id) {
+      case 4740: return { ...base, sev: "high", what: `Compte verrouillé${e.caller ? `, poste ${e.caller}` : ""}` };
+      case 4767: return { ...base, sev: "low", what: `Compte déverrouillé par ${e.subject || "?"}` };
+      case 4771: return { ...base, sev: "mid", what: e.status === "0x18" ? `Mot de passe erroné${e.caller ? ` depuis ${plain(e.caller)}` : ""}` : `Pré-authentification Kerberos refusée (${e.status})` };
+      case 4625: return { ...base, sev: "mid", what: `Échec d'ouverture de session${e.caller && e.caller !== "-" ? ` depuis ${plain(e.caller)}` : ""}` };
+      case 4720: return { ...base, sev: "low", what: `Compte créé par ${e.subject || "?"}` };
+      case 4726: return { ...base, sev: "mid", what: `Compte supprimé par ${e.subject || "?"}` };
+      default:   return { ...base, sev: "mid", who: "", what: `${e.member || "Un membre"} ajouté à ${e.target} par ${e.subject || "?"}` };
+    }
+  }
+  function alertItem(a) {
+    const known = a.who && users.some((u) => u.sam.toLowerCase() === a.who.toLowerCase());
+    const who = !a.who ? "" : known
+      ? ` <a class="who link" href="#/utilisateurs?compte=${encodeURIComponent(a.who)}">${esc(a.who)}</a>`
+      : ` <span class="who">${esc(a.who)}</span>`;
+    return `<li><span class="sev ${a.sev}"></span>
+      <span class="what">${esc(a.what)}${who}</span>
+      <span class="when">${esc(a.when)}</span>
+      <span class="src"><span class="evt">${a.evt}</span>${esc(a.src)}</span></li>`;
+  }
+  let sevFiltre = "toutes";
+  function renderAlerts() {
+    const none = `<li><span class="what">${errors.alerts ? `Journal indisponible : ${esc(errors.alerts)}` : "Aucun événement sur 7 jours"}</span></li>`;
+    const list = alerts.filter((a) => sevFiltre === "toutes" || a.sev === sevFiltre);
+    $("#log-short").innerHTML = alerts.length ? alerts.slice(0, 4).map(alertItem).join("") : none;
+    $("#log-full").innerHTML = list.length ? list.map(alertItem).join("") : none;
+    $("#log-meta").textContent = alerts.length ? `${Math.min(4, alerts.length)} sur ${alerts.length}` : "";
+    $("#log-all").textContent = `Voir les ${alerts.length} alertes`;
+    $("#nav-alerts").textContent = alerts.filter((a) => a.sev === "high").length || "";
+    $$("#alert-filters .chip").forEach((c) => {
+      $(".mono", c).textContent = c.dataset.sev === "toutes" ? alerts.length : alerts.filter((a) => a.sev === c.dataset.sev).length;
+    });
+  }
+
+  // GPO et stratégie de mots de passe
+  const gpoStatus = {
+    AllSettingsEnabled: ["", "Activée"], AllSettingsDisabled: ["off", "Désactivée"],
+    UserSettingsDisabled: ["", "Ordinateur seulement"], ComputerSettingsDisabled: ["", "Utilisateur seulement"],
+  };
+  function renderGpo() {
+    $("#gpos").innerHTML = gpos.length ? gpos.map((g) => {
+      const [led, label] = gpoStatus[g.status] || ["warn", g.status];
+      return `<tr><td class="main">${esc(g.name)}</td><td class="mono">${g.linked ? "lab.local" : "–"}</td>
+        <td>${esc(g.comment || gpoDesc[g.name] || "–")}</td>
+        <td><span class="state"><span class="led ${led}"></span>${esc(label)}</span></td>
+        <td class="num">${fmtDate.format(new Date(g.modified))}</td></tr>`;
+    }).join("") : `<tr><td colspan="5" class="empty">${errors.gpo ? `GPO indisponibles : ${esc(errors.gpo)}` : "Chargement…"}</td></tr>`;
+    if (policy) {
+      $("#pol-len").textContent = policy.minLength;
+      $("#pol-len-d").textContent = policy.complexity ? "caractères, complexité exigée" : "caractères, sans complexité";
+      $("#pol-age").textContent = policy.maxAgeDays;
+      $("#pol-thr").textContent = policy.lockoutThreshold;
+      $("#pol-dur").textContent = policy.lockoutMinutes;
+    }
+    $("#stat-gpo").textContent = gpos.length ? gpos.filter((g) => g.linked && g.name.startsWith("SEC - ")).length : "–";
+    $("#nav-gpo").textContent = gpos.length || "";
+  }
+
+  // Contrôleurs et réplication
+  function dcState(d) {
+    if (!d.reachable) return ["bad", "Injoignable"];
+    if (d.inbound.some((i) => i.failures > 0 || i.result !== 0)) return ["warn", "Réplication en échec"];
+    return ["", "En ligne"];
+  }
+  const shortPart = (p) => /^DC=[^,]+,DC=/.test(p) && !/DnsZones/.test(p) ? p : p.replace(/(,DC=[^,]+)+$/, "");
+  function renderDcs() {
+    if (!dcs.length) {
+      const msg = errors.dcs ? `Contrôleurs indisponibles : ${esc(errors.dcs)}` : "Chargement…";
+      $("#dcs").innerHTML = `<div class="panel"><div class="panel-body">${msg}</div></div>`;
+      $("#repl").innerHTML = "";
+      $("#domain-rows").innerHTML = `<div class="domain-row"><span class="led ${errors.dcs ? "bad" : "off"}"></span>${errors.dcs ? "Lab injoignable" : "Connexion"}<span class="mono"></span></div>`;
+      return;
+    }
+    $("#dcs").innerHTML = dcs.map((d) => {
+      const [led, label] = dcState(d);
+      const last = d.inbound.map((i) => i.lastSuccess).filter(Boolean).sort().pop();
+      const roles = ["AD DS", d.gc ? "Catalogue global" : "", d.fsmo.length ? `${d.fsmo.length} rôle${d.fsmo.length > 1 ? "s" : ""} FSMO` : ""].filter(Boolean);
+      return `<div class="panel">
+        <div class="server-head"><h2>${esc(d.name)}</h2><span class="state"><span class="led ${led}"></span>${label}</span></div>
+        <div class="panel-body"><dl class="props" style="margin-top:0">
+          <dt>Adresse</dt><dd class="mono">${esc(d.ip)}</dd>
+          <dt>Site</dt><dd>${esc(d.site)}</dd>
+          <dt>Dernière réplication</dt><dd>${rel(last)}</dd>
+          <dt>Rôles</dt><dd><div class="tags" style="justify-content:flex-end">${roles.map((r) => `<span class="tag">${esc(r)}</span>`).join("")}</div></dd>
+        </dl></div></div>`;
+    }).join("");
+    const links = dcs.flatMap((d) => d.inbound.map((i) => ({ ...i, dest: d.name })));
+    $("#repl").innerHTML = links.map((i) => {
+      const ok = i.result === 0 && i.failures === 0;
+      return `<tr><td class="main">${esc(i.source)}</td><td>${esc(i.dest)}</td><td class="mono">${esc(shortPart(i.partition))}</td>
+        <td class="num">${rel(i.lastSuccess)}</td><td class="r num">${i.failures}</td>
+        <td><span class="state"><span class="led ${ok ? "" : "warn"}"></span>${ok ? "OK" : `Erreur ${i.result}`}</span></td></tr>`;
+    }).join("");
+    const failing = links.filter((i) => i.result !== 0 || i.failures > 0).length;
+    const last = links.map((i) => i.lastSuccess).filter(Boolean).sort().pop();
+    $("#stat-repl").textContent = failing;
+    $("#stat-repl-d").textContent = `sur ${links.length} liaisons, dernière réussite ${rel(last)}`;
+    $("#nav-dcs").textContent = dcs.length;
+    $("#domain-rows").innerHTML = dcs.map((d) => {
+      const [led, label] = dcState(d);
+      return `<div class="domain-row"><span class="led ${led}"></span>${esc(d.name)}<span class="mono">${label.toLowerCase()}</span></div>`;
+    }).join("");
+  }
+
+  function renderStats() {
+    const locked = users.filter((u) => u.etat === "verrouille");
+    const depts = [...new Set(users.map((u) => u.service))].filter((s) => s !== "–");
+    $("#stat-users").textContent = users.length || "–";
+    $("#stat-users-d").textContent = depts.length > 1 ? `${depts.slice(0, -1).join(", ")} et ${depts.at(-1)}` : depts.join("") || " ";
+    $("#stat-locked").textContent = users.length ? locked.length : "–";
+    $("#stat-locked-d").textContent = locked.length ? locked.map((u) => u.sam).join(", ") : "aucun compte bloqué";
+    $("#nav-users").textContent = users.length || "";
+  }
+
+  // Chargement depuis l'API, puis toutes les 60 s
+  const loaders = {
+    users: (d) => { users = d.map(toUser); renderUsers(); renderStats(); renderAlerts(); },
+    alerts: (d) => { alerts = d.map(toAlert).sort((a, b) => b.time.localeCompare(a.time)); renderAlerts(); },
+    gpo: (d) => { gpos = d.gpos; policy = d.policy; renderGpo(); renderDetail(); },
+    dcs: (d) => { dcs = d; renderDcs(); },
+  };
+  const renderers = { users: () => { renderUsers(); renderStats(); }, alerts: renderAlerts, gpo: renderGpo, dcs: renderDcs };
+  async function load(name) {
+    try {
+      const data = await api(`/api/${name}`);
+      delete errors[name];
+      loaders[name](data);
+    } catch (e) {
+      const first = !errors[name];
+      errors[name] = e.message;
+      renderers[name]();
+      if (first) toast(`Lecture de ${name} impossible : ${e.message}`);
+    }
+    setHeader();
+  }
+  const loadAll = () => Promise.all(Object.keys(loaders).map(load));
+
+  function toast(text) {
+    const t = $("#toast");
+    t.textContent = text;
+    t.classList.add("on");
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => t.classList.remove("on"), 3200);
+  }
+
+  // Navigation par l'ancre, pour que le bouton retour fonctionne
+  let current = "tableau-de-bord";
+  function setHeader() {
+    $("#title").textContent = views[current][0];
+    $("#subtitle").textContent = views[current][1]();
+    document.title = `${views[current][0]} · lab.local`;
+  }
+  function route() {
+    const [path, query] = location.hash.replace(/^#\/?/, "").split("?");
+    current = views[path] ? path : "tableau-de-bord";
+    const params = new URLSearchParams(query || "");
+    $$(".view").forEach((v) => v.classList.toggle("on", v.dataset.view === current));
+    $$(".nav a").forEach((a) => {
+      const on = a.dataset.view === current;
+      a.classList.toggle("active", on);
+      on ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current");
+    });
+    setHeader();
+    if (current === "utilisateurs") {
+      if (params.get("etat")) setFiltre(params.get("etat"));
+      if (params.get("compte")) { selection = params.get("compte"); $("#q").value = ""; setFiltre("tous"); }
+      renderUsers();
+    }
+    window.scrollTo(0, 0);
+  }
+  function setFiltre(f) {
+    filtre = f;
+    $$("#user-filters .chip").forEach((c) => c.setAttribute("aria-pressed", c.dataset.etat === f));
+  }
+
+  $("#user-filters").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip"); if (!c) return;
+    setFiltre(c.dataset.etat); renderUsers();
+  });
+  $("#alert-filters").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip"); if (!c) return;
+    sevFiltre = c.dataset.sev;
+    $$("#alert-filters .chip").forEach((x) => x.setAttribute("aria-pressed", x === c));
+    renderAlerts();
+  });
+  $("#users").addEventListener("click", (e) => {
+    const tr = e.target.closest("tr[data-sam]"); if (!tr) return;
+    selection = tr.dataset.sam; renderUsers();
+  });
+  $("#users").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.dataset.sam) { selection = e.target.dataset.sam; renderUsers(); }
+  });
+  $("#q").addEventListener("input", () => {
+    if (!location.hash.startsWith("#/utilisateurs")) location.hash = "#/utilisateurs";
+    else renderUsers();
+  });
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); $("#q").focus(); $("#q").select(); }
+    if (e.key === "Escape" && document.activeElement === $("#q")) { $("#q").value = ""; $("#q").blur(); if (location.hash.startsWith("#/utilisateurs")) renderUsers(); }
+  });
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("[data-toast]")) toast("Pas encore relié au lab");
+    if (e.target.id === "unlock") unlock(e.target);
+    const t = e.target.closest(".toggle");
+    if (t) t.setAttribute("aria-checked", t.getAttribute("aria-checked") !== "true");
+    const s = e.target.closest("[data-step]");
+    if (s) { const o = $("#seuil"); o.textContent = Math.min(10, Math.max(3, +o.textContent + +s.dataset.step)); }
+  });
+
+  window.addEventListener("hashchange", route);
+  route();
+  renderUsers(); renderAlerts(); renderGpo(); renderDcs();
+  loadAll();
+  setInterval(loadAll, 60000);
+</script>
+</body>
+</html>

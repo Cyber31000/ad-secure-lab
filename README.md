@@ -108,6 +108,8 @@ ad-secure-lab/
 │   │   └── 03-configure-dfs.ps1
 │   └── client/
 │       └── 01-join-domain.ps1
+├── tools/
+│   └── dashboard/           tableau de bord web relié à DC01
 └── docs/                    documentation technique
     ├── architecture.md      schéma réseau et choix d'infrastructure
     ├── architecture.png     schéma d'architecture du lab (image)
@@ -122,6 +124,7 @@ ad-secure-lab/
 - [Conception de l'annuaire](docs/ou-design.md) : structure d'OU, délégation, ciblage de GPO
 - [Durcissement par GPO](docs/gpo-hardening.md) : chaque mesure, le vecteur d'attaque qu'elle contre, la référence ANSSI ou CIS associée
 - [Dépannage](docs/troubleshooting.md) : erreurs fréquentes et corrections
+- [Tableau de bord](tools/dashboard/README.md) : page web qui lit l'annuaire et déverrouille les comptes
 
 ## Note de sécurité
 
